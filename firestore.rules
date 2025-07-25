@@ -1,0 +1,157 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función helper para verificar si el usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Función helper para verificar si es el propietario del documento
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Función helper para verificar si es admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Función para verificar datos válidos de usuario
+    function isValidUserData() {
+      return request.resource.data.keys().hasAll(['email', 'name', 'role']) &&
+             request.resource.data.role in ['admin', 'user'] &&
+             request.resource.data.email is string &&
+             request.resource.data.name is string;
+    }
+    
+    // Usuarios - Solo pueden leer/escribir su propio perfil
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUserData();
+      allow update: if isOwner(userId) && isValidUserData();
+      allow delete: if false; // No permitir borrar usuarios
+    }
+    
+    // Partidos - Solo admins pueden escribir, todos pueden leer
+    match /matches/{matchId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Quinielas - Solo admins pueden crear/editar, todos pueden leer
+    match /quinielas/{quinielaId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin();
+      allow delete: if false; // No permitir borrar quinielas
+    }
+    
+    // Predicciones - Solo el propietario puede leer/escribir sus predicciones
+    match /predictions/{predictionId} {
+      allow read, write: if isAuthenticated() && 
+                           predictionId.matches('^' + request.auth.uid + '_.*');
+      allow read: if isAdmin(); // Admin puede leer todas las predicciones
+    }
+    
+    // Pagos - Reglas específicas por rol
+    match /payments/{paymentId} {
+      // Los usuarios pueden leer pagos donde están involucrados
+      allow read: if isAuthenticated() && (
+        resource.data.fromUser == request.auth.uid ||
+        resource.data.toUser == request.auth.uid
+      );
+      
+      // Solo admins pueden crear pagos
+      allow create: if isAdmin();
+      
+      // Los usuarios pueden marcar sus pagos como pagados
+      allow update: if isAuthenticated() && (
+        (resource.data.fromUser == request.auth.uid && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'paidAt', 'confirmedBy', 'paymentMethod', 'notes', 'updatedAt']) &&
+         request.resource.data.status == 'paid') ||
+        isAdmin()
+      );
+      
+      // No permitir borrar pagos
+      allow delete: if false;
+    }
+    
+    // Logs del sistema (solo lectura para admins)
+    match /logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Los logs se crean por Cloud Functions
+    }
+    
+    // Configuración global (solo admins)
+    match /config/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Notificaciones de usuarios
+    match /notifications/{notificationId} {
+      allow read, write: if isAuthenticated() && 
+                           resource.data.userId == request.auth.uid;
+      allow create: if isAdmin(); // Admin puede crear notificaciones
+    }
+    
+    // Estadísticas globales (solo lectura)
+    match /stats/{statId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Backup y archivos temporales (solo admin)
+    match /backup/{backupId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Regla de denegación por defecto
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// Reglas para Firebase Storage
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Imágenes de usuarios (avatares)
+    match /users/{userId}/avatar.{extension} {
+      allow read: if true; // Avatares públicos
+      allow write: if request.auth != null && 
+                    request.auth.uid == userId &&
+                    extension in ['jpg', 'jpeg', 'png', 'webp'] &&
+                    resource.size < 2 * 1024 * 1024; // Max 2MB
+    }
+    
+    // Imágenes de equipos/logos
+    match /teams/{teamId}/logo.{extension} {
+      allow read: if true; // Logos públicos
+      allow write: if request.auth != null &&
+                    // Solo admin puede subir logos
+                    exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+                    get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Screenshots para PWA
+    match /app/screenshots/{fileName} {
+      allow read: if true; // Screenshots públicos
+      allow write: if false; // Solo por admin via consola
+    }
+    
+    // Iconos de la app
+    match /app/icons/{fileName} {
+      allow read: if true; // Iconos públicos
+      allow write: if false; // Solo por admin via consola
+    }
+    
+    // Denegación por defecto
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
