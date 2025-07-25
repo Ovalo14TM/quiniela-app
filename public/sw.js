@@ -195,12 +195,12 @@ self.addEventListener('push', (event) => {
     try {
       data = event.data.json();
     } catch (e) {
-      data.title = event.data.text() || 'Quiniela Primos';
+      data.title = event.data.text() || 'Quiniela';
     }
   }
   
   const options = {
-    title: data.title || 'Quiniela Primos',
+    title: data.title || 'Quiniela',
     body: data.body || 'Tienes una nueva notificación',
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-72x72.png',

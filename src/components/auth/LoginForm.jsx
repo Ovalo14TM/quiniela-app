@@ -1,7 +1,6 @@
-// src/components/auth/LoginForm.jsx
-import React, { useState } from 'react';
+// src/components/auth/LoginForm.jsx - Versión con estilos inline para arreglar el problema
+import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import '../../styles/login.css'; // Importar CSS personalizado
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -43,37 +42,171 @@ export default function LoginForm() {
     setLoading(false);
   };
 
+  const quickLogin = (email, password) => {
+    setEmail(email);
+    setPassword(password);
+    setIsRegistering(false);
+  };
+
+  // Estilos inline para asegurar que funcionen
+  const containerStyle = {
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #2563eb 100%)',
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'relative',
+    overflow: 'hidden',
+    padding: '0'
+  };
+
+  const contentStyle = {
+    position: 'relative',
+    zIndex: 10,
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    padding: '32px 16px',
+    minHeight: '100vh'
+  };
+
+  const cardStyle = {
+    width: '100%',
+    maxWidth: '400px',
+    margin: '0 auto',
+    background: 'rgba(255, 255, 255, 0.1)',
+    backdropFilter: 'blur(20px)',
+    borderRadius: '16px',
+    padding: '24px',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    boxShadow: '0 25px 45px rgba(0, 0, 0, 0.1)'
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '16px',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    border: 'none',
+    borderRadius: '12px',
+    fontSize: '16px',
+    color: '#374151',
+    outline: 'none',
+    marginBottom: '16px'
+  };
+
+  const buttonStyle = {
+    width: '100%',
+    padding: '16px',
+    background: 'rgba(255, 255, 255, 0.2)',
+    border: '2px solid rgba(255, 255, 255, 0.3)',
+    borderRadius: '12px',
+    color: 'white',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px'
+  };
+
+  const testAccountStyle = {
+    width: '100%',
+    padding: '12px',
+    background: 'rgba(255, 255, 255, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '8px',
+    color: 'white',
+    cursor: 'pointer',
+    marginBottom: '8px',
+    transition: 'all 0.2s ease'
+  };
+
   return (
-    <div className="gradient-bg flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Elementos decorativos flotantes */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="floating-element absolute -top-20 -right-20 w-40 h-40 md:w-80 md:h-80 bg-white opacity-10 rounded-full"></div>
-        <div className="floating-element absolute -bottom-20 -left-20 w-48 h-48 md:w-96 md:h-96 bg-white opacity-5 rounded-full"></div>
-        <div className="floating-element absolute top-1/3 left-1/4 w-32 h-32 md:w-64 md:h-64 bg-white opacity-5 rounded-full"></div>
+    <div style={containerStyle}>
+      {/* Elementos decorativos de fondo */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        overflow: 'hidden',
+        pointerEvents: 'none'
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: '-80px',
+          right: '-80px',
+          width: '160px',
+          height: '160px',
+          background: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '50%',
+          animation: 'pulse 3s ease-in-out infinite'
+        }}></div>
+        <div style={{
+          position: 'absolute',
+          bottom: '-80px',
+          left: '-80px',
+          width: '180px',
+          height: '180px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: '50%',
+          animation: 'pulse 4s ease-in-out infinite'
+        }}></div>
       </div>
 
-      {/* Contenedor principal */}
-      <div className="relative z-10 w-full max-w-sm mx-auto">
+      <div style={contentStyle}>
         {/* Logo y header */}
-        <div className="text-center mb-6 fade-in">
-          <div className="logo-bounce inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 glass rounded-2xl mb-3 shadow-lg">
-            <span className="text-3xl md:text-4xl">🏆</span>
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '80px',
+            height: '80px',
+            background: 'rgba(255, 255, 255, 0.2)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '16px',
+            marginBottom: '16px',
+            fontSize: '40px'
+          }}>
+            🏆
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 tracking-tight">
+          <h1 style={{
+            fontSize: '36px',
+            fontWeight: 'bold',
+            color: 'white',
+            marginBottom: '8px',
+            margin: '0 0 8px 0'
+          }}>
             Quiniela Primos
           </h1>
-          <p className="text-blue-100 text-base md:text-lg">
+          <p style={{
+            color: 'rgba(219, 234, 254, 1)',
+            fontSize: '18px',
+            margin: '0'
+          }}>
             Compite, predice y gana
           </p>
         </div>
 
         {/* Formulario principal */}
-        <div className="glass rounded-2xl p-6 md:p-8 shadow-2xl">
-          <div className="text-center mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+        <div style={cardStyle}>
+          {/* Header del formulario */}
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: 'bold',
+              color: 'white',
+              marginBottom: '8px',
+              margin: '0 0 8px 0'
+            }}>
               {isRegistering ? 'Crear Cuenta' : 'Iniciar Sesión'}
             </h2>
-            <p className="text-blue-100 text-sm md:text-base">
+            <p style={{
+              color: 'rgba(219, 234, 254, 1)',
+              fontSize: '14px',
+              margin: '0'
+            }}>
               {isRegistering 
                 ? 'Únete a la competencia' 
                 : 'Bienvenido de vuelta'
@@ -81,89 +214,141 @@ export default function LoginForm() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-4">
-              {/* Campo Email */}
-              <div>
-                <label className="block text-white text-sm font-semibold mb-2">
-                  📧 Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input-focus w-full px-4 py-3 md:py-4 bg-white bg-opacity-90 border-0 rounded-xl text-gray-800 placeholder-gray-500 text-base"
-                  placeholder="tu@email.com"
-                  required
-                />
-              </div>
+          <form onSubmit={handleSubmit}>
+            {/* Campo Email */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '600',
+                marginBottom: '8px'
+              }}>
+                📧 Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={inputStyle}
+                placeholder="tu@email.com"
+                required
+              />
+            </div>
 
-              {/* Campo Contraseña */}
-              <div>
-                <label className="block text-white text-sm font-semibold mb-2">
-                  🔒 Contraseña
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="input-focus w-full px-4 py-3 md:py-4 bg-white bg-opacity-90 border-0 rounded-xl text-gray-800 placeholder-gray-500 text-base pr-12"
-                    placeholder="••••••••"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="password-toggle text-gray-500 hover:text-gray-700"
-                  >
-                    {showPassword ? '🙈' : '👁️'}
-                  </button>
-                </div>
-              </div>
+            {/* Campo Contraseña */}
+            <div style={{ marginBottom: '20px', position: 'relative' }}>
+              <label style={{
+                display: 'block',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '600',
+                marginBottom: '8px'
+              }}>
+                🔒 Contraseña
+              </label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={inputStyle}
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '38px',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '18px',
+                  cursor: 'pointer'
+                }}
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
             </div>
 
             {/* Error message */}
             {error && (
-              <div className="fade-in bg-red-500 bg-opacity-20 border border-red-400 border-opacity-50 rounded-xl p-3">
-                <div className="flex items-center">
-                  <span className="text-red-200 mr-2">⚠️</span>
-                  <span className="text-red-100 text-sm font-medium">{error}</span>
-                </div>
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                borderRadius: '12px',
+                padding: '12px',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <span style={{ marginRight: '8px', fontSize: '18px' }}>⚠️</span>
+                <span style={{ fontSize: '14px', color: 'rgba(254, 202, 202, 1)' }}>{error}</span>
               </div>
             )}
 
-            {/* Botón Submit */}
+            {/* Submit button */}
             <button
               type="submit"
               disabled={loading}
-              className="btn-glass w-full py-3 md:py-4 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                ...buttonStyle,
+                opacity: loading ? 0.5 : 1,
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) {
+                  e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                }
+              }}
             >
               {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="loading-spinner mr-3"></div>
+                <>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderTop: '2px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
                   Procesando...
-                </div>
+                </>
               ) : (
-                <div className="flex items-center justify-center">
-                  <span className="mr-2 text-lg">
+                <>
+                  <span style={{ fontSize: '18px' }}>
                     {isRegistering ? '🚀' : '👋'}
                   </span>
                   {isRegistering ? 'Crear Cuenta' : 'Iniciar Sesión'}
-                </div>
+                </>
               )}
             </button>
           </form>
 
           {/* Toggle entre login/registro */}
-          <div className="mt-6 text-center">
+          <div style={{ marginTop: '24px', textAlign: 'center' }}>
             <button
               type="button"
               onClick={() => {
                 setIsRegistering(!isRegistering);
                 setError('');
               }}
-              className="text-white hover:text-blue-200 text-sm font-medium transition-colors duration-300 underline decoration-dotted underline-offset-4"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                fontSize: '14px',
+                textDecoration: 'underline',
+                cursor: 'pointer'
+              }}
             >
               {isRegistering 
                 ? '¿Ya tienes cuenta? Inicia sesión' 
@@ -171,50 +356,48 @@ export default function LoginForm() {
               }
             </button>
           </div>
-
-          {/* Cuentas de prueba */}
-          <div className="mt-6 p-4 glass rounded-xl">
-            <p className="text-white text-xs text-center mb-3 font-semibold">
-              🧪 Cuentas de Prueba
-            </p>
-            <div className="space-y-2">
-              <div className="test-account-card rounded-lg p-2">
-                <div className="text-xs text-blue-100">
-                  <div className="font-medium text-white mb-1">Admin:</div>
-                  <div className="break-words">admin@quiniela.com / 123456</div>
-                </div>
-              </div>
-              <div className="test-account-card rounded-lg p-2">
-                <div className="text-xs text-blue-100">
-                  <div className="font-medium text-white mb-1">Usuario:</div>
-                  <div className="break-words">primo1@quiniela.com / 123456</div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
+
         {/* Footer */}
-        <div className="text-center mt-6 fade-in">
-          <p className="text-blue-200 text-sm mb-2">
-            Sistema de quinielas entre primos
+        <div style={{ textAlign: 'center', marginTop: '32px' }}>
+          <p style={{
+            color: 'rgba(219, 234, 254, 1)',
+            fontSize: '14px',
+            margin: '0 0 8px 0'
+          }}>
+            Sistema de quinielas
           </p>
-          <div className="flex justify-center space-x-4 text-xs text-blue-300">
-            <span className="flex items-center">
-              <span className="mr-1">🏆</span>
-              Predicciones
-            </span>
-            <span className="flex items-center">
-              <span className="mr-1">📊</span>
-              Rankings
-            </span>
-            <span className="flex items-center">
-              <span className="mr-1">💰</span>
-              Pagos
-            </span>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '16px',
+            fontSize: '12px',
+            color: 'rgba(147, 197, 253, 1)'
+          }}>
+            <span>🏆 Predicciones</span>
+            <span>📊 Rankings</span>
+            <span>💰 Pagos</span>
           </div>
         </div>
       </div>
+
+      {/* CSS para animaciones */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+          0%, 100% { opacity: 0.1; }
+          50% { opacity: 0.2; }
+        }
+        
+        * {
+          box-sizing: border-box;
+        }
+      `}</style>
     </div>
   );
 }

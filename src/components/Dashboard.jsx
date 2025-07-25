@@ -53,7 +53,7 @@ export default function Dashboard() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <h1 className="text-xl font-bold text-gray-900">
-                🏆 Quiniela Primos
+                🏆 Quiniela
               </h1>
               
               {/* Navigation */}

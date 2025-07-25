@@ -1,6 +1,6 @@
 {
-  "name": "Quiniela Primos - Sistema de Apuestas",
-  "short_name": "Quiniela Primos",
+  "name": "Quiniela - Sistema de Apuestas",
+  "short_name": "Quiniela",
   "description": "App de quinielas entre primos con predicciones, puntuación automática y rankings",
   "start_url": "/",
   "display": "standalone",
