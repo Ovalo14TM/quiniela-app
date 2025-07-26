@@ -231,17 +231,38 @@ const getQuinielaStats = async (quinielaId) => {
   }
 };
 
-// Actualizar estado de quiniela manualmente
-export const updateQuinielaStatus = async (quinielaId, status) => {
+export const updateQuinielaStatus = async (quinielaId, status, reason = '') => {
   try {
     const quinielaRef = doc(db, 'quinielas', quinielaId);
-    await updateDoc(quinielaRef, {
+    const updateData = {
       status,
       updatedAt: serverTimestamp(),
       lastStatusUpdate: serverTimestamp()
-    });
+    };
+
+    // Si se está cerrando manualmente, agregar información adicional
+    if (status === 'closed') {
+      updateData.closedManually = true;
+      updateData.closureReason = reason || 'Cerrada por administrador';
+      updateData.closedAt = serverTimestamp();
+    }
+
+    // Si se está reabriendo
+    if (status === 'open') {
+      updateData.closedManually = false;
+      updateData.reopenedAt = serverTimestamp();
+    }
+
+    await updateDoc(quinielaRef, updateData);
     
     console.log(`📝 Estado de quiniela ${quinielaId} actualizado a: ${status}`);
+    
+    // Opcional: Enviar notificación a usuarios (implementar después)
+    if (status === 'closed') {
+      console.log('🔔 Notificando a usuarios sobre cierre de quiniela');
+      // Aquí podrías agregar lógica para notificar a usuarios
+    }
+    
     return true;
   } catch (error) {
     console.error('Error updating quiniela status:', error);
@@ -278,21 +299,25 @@ export const addParticipantToQuiniela = async (quinielaId, userId) => {
   }
 };
 
-// Verificar si quiniela está abierta para predicciones
 export const isQuinielaOpen = (quiniela) => {
   if (!quiniela) {
     return false;
   }
   
-  // Si el status no es 'open', no está disponible
+  // Si el status no es 'open', definitivamente no está disponible
   if (quiniela.status !== 'open') {
     return false;
   }
   
-  // Verificar deadline
-  const deadline = quiniela.deadline?.toDate ? quiniela.deadline.toDate() : new Date(quiniela.deadline);
+  // Verificar deadline solo si el status es 'open'
+  const deadline = quiniela.deadline?.toDate ? 
+    quiniela.deadline.toDate() : 
+    new Date(quiniela.deadline);
   const now = new Date();
   
+  // La quiniela está abierta solo si:
+  // 1. El status es 'open' Y
+  // 2. Aún no se ha cumplido el deadline
   return now < deadline;
 };
 
@@ -434,4 +459,29 @@ export const reactivateQuiniela = async (quinielaId) => {
     console.error('Error reactivating quiniela:', error);
     return false;
   }
+};
+export const getQuinielaClosureReason = (quiniela) => {
+  if (!quiniela) return 'unknown';
+  
+  const deadline = quiniela.deadline?.toDate ? 
+    quiniela.deadline.toDate() : 
+    new Date(quiniela.deadline);
+  const now = new Date();
+  
+  // Si el estado es 'closed' pero aún no se ha cumplido el deadline
+  if (quiniela.status === 'closed' && now < deadline) {
+    return 'manual'; // Cerrada manualmente por admin
+  }
+  
+  // Si el deadline ya pasó
+  if (now >= deadline) {
+    return 'automatic'; // Cerrada automáticamente por tiempo
+  }
+  
+  // Si está abierta
+  if (quiniela.status === 'open') {
+    return 'open';
+  }
+  
+  return 'other';
 };

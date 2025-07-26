@@ -65,11 +65,8 @@ export default function LoginForm() {
             <span className="logo-icon">🏆</span>
           </div>
           <h1 className="main-title animate-fadeIn">
-            Quiniela Primos
+            Quiniela
           </h1>
-          <p className="main-subtitle animate-fadeIn">
-            Compite, predice y gana
-          </p>
         </div>
 
         {/* Formulario principal */}
@@ -160,21 +157,7 @@ export default function LoginForm() {
           </form>
 
           {/* Toggle entre login/registro */}
-          <div className="form-footer">
-            <button
-              type="button"
-              onClick={() => {
-                setIsRegistering(!isRegistering);
-                setError('');
-              }}
-              className="toggle-button"
-            >
-              {isRegistering 
-                ? '¿Ya tienes cuenta? Inicia sesión' 
-                : '¿No tienes cuenta? Regístrate'
-              }
-            </button>
-          </div>
+
         </div>
 
 

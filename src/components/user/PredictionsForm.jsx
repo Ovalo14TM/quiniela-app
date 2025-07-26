@@ -1,4 +1,4 @@
-// src/components/user/PredictionsForm.jsx - Versión mejorada con info del primer partido
+// src/components/user/PredictionsForm.jsx - Versión corregida para manejar el valor 0
 import React, { useState, useEffect } from 'react';
 import { getCurrentQuiniela, isQuinielaOpen, getTimeUntilDeadline } from '../../services/quinielaService';
 import { getMatchesByWeek } from '../../services/matchesService';
@@ -7,7 +7,6 @@ import { formatMatchDate } from '../../services/footballService';
 import { useAuth } from '../../context/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
-
 
 export default function PredictionsForm() {
   const { currentUser } = useAuth();
@@ -44,17 +43,17 @@ export default function PredictionsForm() {
         setCurrentQuiniela(quiniela);
         
         // Cargar partidos de la quiniela
-   const quinielaMatches = await Promise.all(
-  quiniela.matches.map(async (matchId) => {
-    const matchRef = doc(db, 'matches', matchId);
-    const matchSnap = await getDoc(matchRef);
-    
-    if (matchSnap.exists()) {
-      return { id: matchSnap.id, ...matchSnap.data() };
-    }
-    return null;
-  })
-);
+        const quinielaMatches = await Promise.all(
+          quiniela.matches.map(async (matchId) => {
+            const matchRef = doc(db, 'matches', matchId);
+            const matchSnap = await getDoc(matchRef);
+            
+            if (matchSnap.exists()) {
+              return { id: matchSnap.id, ...matchSnap.data() };
+            }
+            return null;
+          })
+        );
         // Filtrar matches válidos y ordenar por fecha
         const validMatches = quinielaMatches
           .filter(match => match != null)
@@ -123,13 +122,21 @@ export default function PredictionsForm() {
   const savePredictionForMatch = async (matchId) => {
     const prediction = predictions[matchId];
     
-    if (!prediction || prediction.homeScore === undefined || prediction.awayScore === undefined) {
+    // CORRECCIÓN: Verificar que los valores existan y sean números válidos (incluyendo 0)
+    if (!prediction || 
+        prediction.homeScore === undefined || prediction.homeScore === null || 
+        prediction.awayScore === undefined || prediction.awayScore === null ||
+        prediction.homeScore === '' || prediction.awayScore === '') {
       alert('Por favor completa ambos marcadores');
       return;
     }
 
-    if (prediction.homeScore < 0 || prediction.awayScore < 0) {
-      alert('Los marcadores no pueden ser negativos');
+    // CORRECCIÓN: Convertir a números y validar que sean >= 0
+    const homeScore = Number(prediction.homeScore);
+    const awayScore = Number(prediction.awayScore);
+    
+    if (isNaN(homeScore) || isNaN(awayScore) || homeScore < 0 || awayScore < 0) {
+      alert('Los marcadores deben ser números válidos y no negativos');
       return;
     }
 
@@ -139,8 +146,8 @@ export default function PredictionsForm() {
         userId: currentUser.uid,
         matchId,
         quinielaId: currentQuiniela.id,
-        homeScore: prediction.homeScore,
-        awayScore: prediction.awayScore
+        homeScore: homeScore, // Usar el número convertido
+        awayScore: awayScore  // Usar el número convertido
       });
       
       alert('Predicción guardada correctamente');
@@ -152,11 +159,15 @@ export default function PredictionsForm() {
   };
 
   const saveAllPredictions = async () => {
-    const incompletePredictions = matches.filter(match => 
-      !predictions[match.id] || 
-      predictions[match.id].homeScore === undefined || 
-      predictions[match.id].awayScore === undefined
-    );
+    // CORRECCIÓN: Verificar predicciones completas incluyendo el valor 0
+    const incompletePredictions = matches.filter(match => {
+      const prediction = predictions[match.id];
+      return !prediction || 
+             prediction.homeScore === undefined || prediction.homeScore === null || 
+             prediction.awayScore === undefined || prediction.awayScore === null ||
+             prediction.homeScore === '' || prediction.awayScore === '' ||
+             isNaN(Number(prediction.homeScore)) || isNaN(Number(prediction.awayScore));
+    });
 
     if (incompletePredictions.length > 0) {
       alert(`Faltan ${incompletePredictions.length} predicciones por completar`);
@@ -165,15 +176,16 @@ export default function PredictionsForm() {
 
     setSaving(true);
     try {
-      const savePromises = matches.map(match => 
-        savePrediction({
+      const savePromises = matches.map(match => {
+        const prediction = predictions[match.id];
+        return savePrediction({
           userId: currentUser.uid,
           matchId: match.id,
           quinielaId: currentQuiniela.id,
-          homeScore: predictions[match.id].homeScore,
-          awayScore: predictions[match.id].awayScore
-        })
-      );
+          homeScore: Number(prediction.homeScore), // Convertir a número
+          awayScore: Number(prediction.awayScore)   // Convertir a número
+        });
+      });
 
       await Promise.all(savePromises);
       alert('¡Todas las predicciones guardadas correctamente!');
@@ -245,7 +257,16 @@ export default function PredictionsForm() {
   }
 
   const isOpen = isQuinielaOpen(currentQuiniela);
-  const completedPredictions = Object.keys(predictions).length;
+  
+  // CORRECCIÓN: Contar predicciones completadas correctamente (incluyendo 0)
+  const completedPredictions = matches.filter(match => {
+    const prediction = predictions[match.id];
+    return prediction && 
+           prediction.homeScore !== undefined && prediction.homeScore !== null && prediction.homeScore !== '' &&
+           prediction.awayScore !== undefined && prediction.awayScore !== null && prediction.awayScore !== '' &&
+           !isNaN(Number(prediction.homeScore)) && !isNaN(Number(prediction.awayScore));
+  }).length;
+  
   const totalPredictions = matches.length;
 
   return (
@@ -408,21 +429,60 @@ export default function PredictionsForm() {
         
         {!isOpen && (
           <div style={{
-            padding: '16px',
-            background: 'rgba(239, 68, 68, 0.2)',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
-            borderRadius: '12px'
+            background: currentQuiniela.status === 'closed' && !timeLeft?.expired
+              ? 'rgba(239, 68, 68, 0.1)' // Cerrada por admin (rojo)
+              : 'rgba(107, 114, 128, 0.1)', // Cerrada por tiempo (gris)
+            border: `1px solid ${currentQuiniela.status === 'closed' && !timeLeft?.expired
+              ? 'rgba(239, 68, 68, 0.3)'
+              : 'rgba(107, 114, 128, 0.3)'}`,
+            borderRadius: '12px',
+            padding: '20px',
+            textAlign: 'center',
+            marginBottom: '16px'
           }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>
+              {currentQuiniela.status === 'closed' && !timeLeft?.expired ? '🔒' : '⏰'}
+            </div>
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: 'bold',
+              color: currentQuiniela.status === 'closed' && !timeLeft?.expired
+                ? '#ef4444'
+                : '#6b7280',
+              margin: '0 0 12px 0'
+            }}>
+              Quiniela Cerrada
+            </h3>
             <p style={{
-              color: '#fca5a5',
+              color: 'rgba(255, 255, 255, 0.8)',
+              margin: '0 0 16px 0',
+              fontSize: '16px'
+            }}>
+              {currentQuiniela.status === 'closed' && !timeLeft?.expired 
+                ? '👑 El administrador cerró la quiniela antes de tiempo'
+                : timeLeft?.expired
+                ? '⏰ Se agotó el tiempo para hacer predicciones'
+                : '🔒 La quiniela está cerrada'
+              }
+            </p>
+            <div style={{
               fontSize: '14px',
-              margin: 0,
+              color: 'rgba(255, 255, 255, 0.6)',
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '12px',
+              borderRadius: '8px',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '8px'
             }}>
-              ⚠️ Esta quiniela está cerrada. Ya no puedes modificar tus predicciones.
-            </p>
+              {currentQuiniela.status === 'closed' && !timeLeft?.expired && (
+                <span>🔧 Contacta al administrador si necesitas hacer cambios</span>
+              )}
+              {timeLeft?.expired && (
+                <span>📅 La quiniela cerró automáticamente por tiempo</span>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -431,7 +491,17 @@ export default function PredictionsForm() {
       <div style={{ marginBottom: '24px' }}>
         {matches.map((match, index) => {
           const matchPrediction = predictions[match.id] || {};
-          const hasValidPrediction = matchPrediction.homeScore !== undefined && matchPrediction.awayScore !== undefined;
+          
+          // CORRECCIÓN: Verificar que las predicciones sean válidas incluyendo 0
+          const hasValidPrediction = matchPrediction.homeScore !== undefined && 
+                                   matchPrediction.homeScore !== null && 
+                                   matchPrediction.homeScore !== '' &&
+                                   matchPrediction.awayScore !== undefined && 
+                                   matchPrediction.awayScore !== null && 
+                                   matchPrediction.awayScore !== '' &&
+                                   !isNaN(Number(matchPrediction.homeScore)) && 
+                                   !isNaN(Number(matchPrediction.awayScore));
+          
           const isFirstMatch = index === 0;
           
           return (
@@ -569,8 +639,19 @@ export default function PredictionsForm() {
                         type="number"
                         min="0"
                         max="20"
-                        value={matchPrediction.homeScore || ''}
-                        onChange={(e) => handlePredictionChange(match.id, 'homeScore', parseInt(e.target.value) || '')}
+                        value={matchPrediction.homeScore !== undefined && matchPrediction.homeScore !== null ? matchPrediction.homeScore : ''}
+                        onChange={(e) => {
+                          // CORRECCIÓN: Manejar correctamente el valor, incluyendo 0 y cadenas vacías
+                          const value = e.target.value;
+                          if (value === '') {
+                            handlePredictionChange(match.id, 'homeScore', '');
+                          } else {
+                            const numValue = parseInt(value);
+                            if (!isNaN(numValue) && numValue >= 0) {
+                              handlePredictionChange(match.id, 'homeScore', numValue);
+                            }
+                          }
+                        }}
                         disabled={!isOpen}
                         style={{
                           width: '64px',
@@ -585,7 +666,7 @@ export default function PredictionsForm() {
                           outline: 'none',
                           transition: 'all 0.3s ease'
                         }}
-                        placeholder="0"
+                        placeholder=""
                         onFocus={(e) => {
                           e.target.style.borderColor = '#3b82f6';
                           e.target.style.background = 'white';
@@ -618,8 +699,19 @@ export default function PredictionsForm() {
                         type="number"
                         min="0"
                         max="20"
-                        value={matchPrediction.awayScore || ''}
-                        onChange={(e) => handlePredictionChange(match.id, 'awayScore', parseInt(e.target.value) || '')}
+                        value={matchPrediction.awayScore !== undefined && matchPrediction.awayScore !== null ? matchPrediction.awayScore : ''}
+                        onChange={(e) => {
+                          // CORRECCIÓN: Manejar correctamente el valor, incluyendo 0 y cadenas vacías
+                          const value = e.target.value;
+                          if (value === '') {
+                            handlePredictionChange(match.id, 'awayScore', '');
+                          } else {
+                            const numValue = parseInt(value);
+                            if (!isNaN(numValue) && numValue >= 0) {
+                              handlePredictionChange(match.id, 'awayScore', numValue);
+                            }
+                          }
+                        }}
                         disabled={!isOpen}
                         style={{
                           width: '64px',
@@ -634,7 +726,7 @@ export default function PredictionsForm() {
                           outline: 'none',
                           transition: 'all 0.3s ease'
                         }}
-                        placeholder="0"
+                        placeholder=""
                         onFocus={(e) => {
                           e.target.style.borderColor = '#3b82f6';
                           e.target.style.background = 'white';
@@ -684,7 +776,7 @@ export default function PredictionsForm() {
                     {isOpen && (
                       <button
                         onClick={() => savePredictionForMatch(match.id)}
-                        disabled={saving || !predictions[match.id]?.homeScore === undefined}
+                        disabled={saving || !hasValidPrediction}
                         style={{
                           fontSize: '12px',
                           background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
@@ -694,15 +786,15 @@ export default function PredictionsForm() {
                           borderRadius: '6px',
                           cursor: 'pointer',
                           transition: 'all 0.3s ease',
-                          opacity: saving ? 0.5 : 1
+                          opacity: saving || !hasValidPrediction ? 0.5 : 1
                         }}
                         onMouseEnter={(e) => {
-                          if (!saving) {
+                          if (!saving && hasValidPrediction) {
                             e.target.style.transform = 'translateY(-1px)';
                           }
                         }}
                         onMouseLeave={(e) => {
-                          if (!saving) {
+                          if (!saving && hasValidPrediction) {
                             e.target.style.transform = 'translateY(0)';
                           }
                         }}

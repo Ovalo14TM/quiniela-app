@@ -7,6 +7,7 @@ import UserPayments from './user/UserPayments';
 import BasicStats from './user/BasicStats'; // ✅ Importar stats
 import Rankings from './Rankings'; // ✅ Importar rankings
 import AdminPanel from './admin/AdminPanel';
+import UserResultsView from './user/UserResultsView';
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
@@ -66,6 +67,13 @@ export default function Dashboard() {
       description: 'Quinielas pasadas',
       available: true // ✅ HABILITADO
     },
+    {
+  id: 'results',
+  label: 'Resultados',
+  icon: '📊',
+  description: 'Ver resultados y puntos',
+  available: true
+},
     {
       id: 'stats',
       label: 'Estadísticas',
@@ -212,7 +220,7 @@ export default function Dashboard() {
                   fontWeight: 'bold',
                   margin: 0
                 }}>
-                  Quiniela Primos
+                  Quiniela
                 </h2>
                 <p style={{
                   color: 'rgba(255, 255, 255, 0.7)',
@@ -366,7 +374,7 @@ export default function Dashboard() {
               fontWeight: 'bold',
               margin: 0
             }}>
-              Quiniela Primos
+              Quiniela
             </h1>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -393,6 +401,10 @@ export default function Dashboard() {
           {/* ✅ SECCIONES PRINCIPALES */}
           {activeView === 'predictions' && <PredictionsForm />}
           {activeView === 'payments' && <UserPayments />}
+          {activeView === 'results' && (
+  <UserResultsView />
+)}
+
           
           {/* ✅ HISTORIAL Y ESTADÍSTICAS HABILITADAS */}
           {activeView === 'history' && <BasicStats />}

@@ -5,6 +5,7 @@ import { getAllQuinielas } from '../../services/quinielaService';
 import { getGlobalRankings } from '../../services/scoringService';
 import { useAuth } from '../../context/AuthContext';
 
+
 export default function BasicStats() {
   const { currentUser } = useAuth();
   const [users, setUsers] = useState([]);

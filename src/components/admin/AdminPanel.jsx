@@ -1,11 +1,13 @@
-// src/components/admin/AdminPanel.jsx - Versión con diseño mejorado
 import React, { useState, useEffect } from 'react';
 import { getAllUsers } from '../../services/userService';
-import AdminPredictionsViewer from './AdminPredictionsViewer';  // ← NUEVA LÍNEA
+import AdminPredictionsViewer from './AdminPredictionsViewer';  
 import MatchesManagement from './MatchesManagement';
 import CreateQuiniela from './CreateQuiniela';
+import AdminUserManagement from './AdminUserManagement';
 import ResultsManagement from './ResultsManagement';
 import PaymentsManagement from './PaymentsManagement';
+import AdminQuinielaControl from './AdminQuinielaControl';
+
 
 export default function AdminPanel() {
   const [users, setUsers] = useState([]);
@@ -38,7 +40,7 @@ export default function AdminPanel() {
         cursor: 'pointer',
         transition: 'all 0.3s ease',
         position: 'relative',
-        background: isActive 
+        background: isActive
           ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
           : 'rgba(255, 255, 255, 0.1)',
         color: 'white',
@@ -92,14 +94,14 @@ export default function AdminPanel() {
       cursor: 'pointer',
       transition: 'all 0.3s ease'
     }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.transform = 'translateY(-4px)';
-      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.transform = 'translateY(0)';
-      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-    }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-4px)';
+        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+      }}
     >
       {/* Background gradient */}
       <div style={{
@@ -116,7 +118,7 @@ export default function AdminPanel() {
       }}>
         <span style={{ fontSize: '24px', filter: 'brightness(1.2)' }}>{icon}</span>
       </div>
-      
+
       <div style={{ position: 'relative', zIndex: 1 }}>
         <p style={{
           color: 'rgba(255, 255, 255, 0.8)',
@@ -149,7 +151,7 @@ export default function AdminPanel() {
             alignItems: 'center',
             gap: '4px'
           }}>
-            <span style={{ 
+            <span style={{
               fontSize: '12px',
               color: trend > 0 ? '#10b981' : '#ef4444'
             }}>
@@ -183,7 +185,7 @@ export default function AdminPanel() {
         }}>
           🔧 Panel de Administración
         </h2>
-        
+
         {/* Tabs */}
         <div style={{
           display: 'flex',
@@ -238,6 +240,13 @@ export default function AdminPanel() {
             label="Pagos"
             icon="💰"
             isActive={activeTab === 'payments'}
+            onClick={setActiveTab}
+          />
+          <TabButton
+            tabId="control"
+            label="Control Quiniela"
+            icon="🎯"
+            isActive={activeTab === 'control'}
             onClick={setActiveTab}
           />
         </div>
@@ -303,7 +312,7 @@ export default function AdminPanel() {
             }}>
               ⚡ Acciones Rápidas
             </h3>
-            
+
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -377,7 +386,7 @@ export default function AdminPanel() {
             }}>
               🔧 Estado del Sistema
             </h3>
-            
+
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -418,22 +427,22 @@ export default function AdminPanel() {
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        background: service.status === 'online' 
-                          ? '#10b981' 
-                          : service.status === 'maintenance' 
-                          ? '#f59e0b' 
-                          : '#ef4444'
+                        background: service.status === 'online'
+                          ? '#10b981'
+                          : service.status === 'maintenance'
+                            ? '#f59e0b'
+                            : '#ef4444'
                       }}></div>
                       <span style={{
                         fontSize: '12px',
-                        color: service.status === 'online' 
-                          ? '#10b981' 
-                          : service.status === 'maintenance' 
-                          ? '#f59e0b' 
-                          : '#ef4444'
+                        color: service.status === 'online'
+                          ? '#10b981'
+                          : service.status === 'maintenance'
+                            ? '#f59e0b'
+                            : '#ef4444'
                       }}>
-                        {service.status === 'online' ? 'En línea' : 
-                         service.status === 'maintenance' ? 'Mantenimiento' : 'Fuera de línea'}
+                        {service.status === 'online' ? 'En línea' :
+                          service.status === 'maintenance' ? 'Mantenimiento' : 'Fuera de línea'}
                       </span>
                     </div>
                   </div>
@@ -548,12 +557,12 @@ export default function AdminPanel() {
                       borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                       transition: 'all 0.3s ease'
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
                     >
                       <td style={{
                         padding: '16px',
@@ -578,12 +587,12 @@ export default function AdminPanel() {
                           fontSize: '12px',
                           fontWeight: '600',
                           borderRadius: '6px',
-                          background: user.role === 'admin' 
-                            ? 'rgba(139, 92, 246, 0.2)' 
+                          background: user.role === 'admin'
+                            ? 'rgba(139, 92, 246, 0.2)'
                             : 'rgba(16, 185, 129, 0.2)',
                           color: user.role === 'admin' ? '#a855f7' : '#10b981',
-                          border: `1px solid ${user.role === 'admin' 
-                            ? 'rgba(139, 92, 246, 0.4)' 
+                          border: `1px solid ${user.role === 'admin'
+                            ? 'rgba(139, 92, 246, 0.4)'
                             : 'rgba(16, 185, 129, 0.4)'}`
                         }}>
                           {user.role === 'admin' ? '👑 Admin' : '👤 Usuario'}
@@ -613,12 +622,12 @@ export default function AdminPanel() {
                           fontSize: '12px',
                           fontWeight: '600',
                           borderRadius: '6px',
-                          background: user.isActive 
-                            ? 'rgba(16, 185, 129, 0.2)' 
+                          background: user.isActive
+                            ? 'rgba(16, 185, 129, 0.2)'
                             : 'rgba(239, 68, 68, 0.2)',
                           color: user.isActive ? '#10b981' : '#ef4444',
-                          border: `1px solid ${user.isActive 
-                            ? 'rgba(16, 185, 129, 0.4)' 
+                          border: `1px solid ${user.isActive
+                            ? 'rgba(16, 185, 129, 0.4)'
                             : 'rgba(239, 68, 68, 0.4)'}`
                         }}>
                           {user.isActive ? '✅ Activo' : '❌ Inactivo'}
@@ -628,7 +637,7 @@ export default function AdminPanel() {
                   ))}
                 </tbody>
               </table>
-              
+
               {users.length === 0 && (
                 <div style={{
                   textAlign: 'center',
@@ -669,13 +678,13 @@ export default function AdminPanel() {
         </div>
       )}
 
-{activeTab === 'predictions' && (
-  <div style={{
-    animation: 'fadeIn 0.6s ease-out'
-  }}>
-    <AdminPredictionsViewer />
-  </div>
-)}
+      {activeTab === 'predictions' && (
+        <div style={{
+          animation: 'fadeIn 0.6s ease-out'
+        }}>
+          <AdminPredictionsViewer />
+        </div>
+      )}
 
       {activeTab === 'payments' && (
         <div style={{
@@ -683,7 +692,18 @@ export default function AdminPanel() {
         }}>
           <PaymentsManagement />
         </div>
+        
       )}
+      {activeTab === 'control' && (
+  <div style={{
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px',
+    animation: 'fadeIn 0.6s ease-out'
+  }}>
+    <AdminQuinielaControl />
+  </div>
+)}
 
       {/* CSS for animations */}
       <style jsx>{`
