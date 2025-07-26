@@ -1,4 +1,4 @@
-// src/components/admin/CreateQuiniela.jsx - Versión con diseño mejorado
+// src/components/admin/CreateQuiniela.jsx - Con deadline automático
 import React, { useState, useEffect } from 'react';
 import { getAllAvailableMatches } from '../../services/matchesService';
 import { createWeeklyQuiniela, getCurrentWeekNumber } from '../../services/quinielaService';
@@ -16,16 +16,26 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
   const [weekNumber, setWeekNumber] = useState(getCurrentWeekNumber());
   const [year, setYear] = useState(new Date().getFullYear());
   const [title, setTitle] = useState(`Semana ${getCurrentWeekNumber()} - ${new Date().getFullYear()}`);
-  const [deadline, setDeadline] = useState('');
+  
+  // Auto-calculated deadline info
+  const [deadlineInfo, setDeadlineInfo] = useState(null);
 
   useEffect(() => {
     loadAvailableMatches();
-    setDefaultDeadline();
   }, []);
 
   useEffect(() => {
     setTitle(`Semana ${weekNumber} - ${year}`);
   }, [weekNumber, year]);
+
+  // Calcular deadline automáticamente cuando cambian los partidos seleccionados
+  useEffect(() => {
+    if (selectedMatches.size > 0) {
+      calculateAutoDeadline();
+    } else {
+      setDeadlineInfo(null);
+    }
+  }, [selectedMatches, availableMatches]);
 
   const loadAvailableMatches = async () => {
     setLoading(true);
@@ -43,14 +53,41 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
     setLoading(false);
   };
 
-  const setDefaultDeadline = () => {
-    // Establecer deadline para mañana a las 18:00
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(18, 0, 0, 0);
-    
-    const deadlineString = tomorrow.toISOString().slice(0, 16);
-    setDeadline(deadlineString);
+  const calculateAutoDeadline = () => {
+    const selectedMatchIds = Array.from(selectedMatches);
+    const selectedMatchObjects = availableMatches.filter(match => 
+      selectedMatchIds.includes(match.id)
+    );
+
+    if (selectedMatchObjects.length === 0) {
+      setDeadlineInfo(null);
+      return;
+    }
+
+    // Encontrar el primer partido (más temprano)
+    const sortedMatches = selectedMatchObjects
+      .map(match => ({
+        ...match,
+        date: match.date?.toDate ? match.date.toDate() : new Date(match.date)
+      }))
+      .sort((a, b) => a.date - b.date);
+
+    const firstMatch = sortedMatches[0];
+    const lastMatch = sortedMatches[sortedMatches.length - 1];
+
+    // Deadline: 30 minutos antes del primer partido
+    const deadline = new Date(firstMatch.date.getTime() - (30 * 60 * 1000));
+
+    setDeadlineInfo({
+      firstMatch,
+      lastMatch,
+      deadline,
+      totalMatches: selectedMatchObjects.length,
+      matchesSpan: {
+        start: firstMatch.date,
+        end: lastMatch.date
+      }
+    });
   };
 
   const toggleMatchSelection = (matchId) => {
@@ -77,8 +114,8 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
       return;
     }
 
-    if (!deadline) {
-      alert('Establece una fecha límite para las predicciones');
+    if (!deadlineInfo) {
+      alert('Error calculando el deadline automático');
       return;
     }
 
@@ -89,19 +126,24 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
         year: parseInt(year),
         title,
         matches: Array.from(selectedMatches),
-        deadline: new Date(deadline),
-        createdBy: currentUser.uid
+        deadline: deadlineInfo.deadline,
+        createdBy: currentUser.uid,
+        firstMatchDate: deadlineInfo.firstMatch.date,
+        lastMatchDate: deadlineInfo.lastMatch.date
       };
 
       await createWeeklyQuiniela(quinielaData);
       
-      alert('¡Quiniela creada exitosamente!');
+      alert('¡Quiniela creada exitosamente!\n\n' +
+            `📅 Primer partido: ${deadlineInfo.firstMatch.homeTeam} vs ${deadlineInfo.firstMatch.awayTeam}\n` +
+            `⏰ Inicia: ${deadlineInfo.firstMatch.date.toLocaleString('es-MX')}\n` +
+            `🔒 Deadline: ${deadlineInfo.deadline.toLocaleString('es-MX')}\n\n` +
+            '¡Los usuarios ya pueden hacer sus predicciones!');
       
       // Reset form
       setSelectedMatches(new Set());
       setWeekNumber(getCurrentWeekNumber());
       setYear(new Date().getFullYear());
-      setDefaultDeadline();
       
       if (onQuinielaCreated) {
         onQuinielaCreated();
@@ -243,41 +285,6 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
               }}
             />
           </div>
-          
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: 'rgba(255, 255, 255, 0.9)',
-              marginBottom: '8px'
-            }}>
-              ⏰ Fecha Límite
-            </label>
-            <input
-              type="datetime-local"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: 'rgba(255, 255, 255, 0.9)',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
-                borderRadius: '8px',
-                color: '#374151',
-                outline: 'none',
-                transition: 'all 0.3s ease'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#3b82f6';
-                e.target.style.background = 'white';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                e.target.style.background = 'rgba(255, 255, 255, 0.9)';
-              }}
-            />
-          </div>
         </div>
         
         {/* Title */}
@@ -317,6 +324,111 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
           />
         </div>
       </div>
+
+      {/* Deadline Info (Auto-calculado) */}
+      {deadlineInfo && (
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '16px',
+          padding: '24px',
+          marginBottom: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.2)'
+        }}>
+          <h4 style={{
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: 'white',
+            margin: '0 0 16px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            ⚡ Información Automática
+          </h4>
+          
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '16px'
+          }}>
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.2)',
+              border: '1px solid rgba(59, 130, 246, 0.4)',
+              borderRadius: '12px',
+              padding: '16px'
+            }}>
+              <h5 style={{
+                fontWeight: 'bold',
+                color: '#60a5fa',
+                margin: '0 0 8px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                🥇 Primer Partido
+              </h5>
+              <div style={{ color: '#93c5fd', fontSize: '14px', lineHeight: 1.4 }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                  {deadlineInfo.firstMatch.homeTeam} vs {deadlineInfo.firstMatch.awayTeam}
+                </div>
+                <div>{deadlineInfo.firstMatch.league}</div>
+                <div>{deadlineInfo.firstMatch.date.toLocaleString('es-MX')}</div>
+              </div>
+            </div>
+            
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.2)',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              borderRadius: '12px',
+              padding: '16px'
+            }}>
+              <h5 style={{
+                fontWeight: 'bold',
+                color: '#fbbf24',
+                margin: '0 0 8px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                🔒 Deadline Automático
+              </h5>
+              <div style={{ color: '#fcd34d', fontSize: '14px', lineHeight: 1.4 }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                  {deadlineInfo.deadline.toLocaleString('es-MX')}
+                </div>
+                <div>30 minutos antes del primer partido</div>
+                <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                  Los usuarios podrán editar hasta esta hora
+                </div>
+              </div>
+            </div>
+            
+            <div style={{
+              background: 'rgba(16, 185, 129, 0.2)',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              borderRadius: '12px',
+              padding: '16px'
+            }}>
+              <h5 style={{
+                fontWeight: 'bold',
+                color: '#34d399',
+                margin: '0 0 8px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                📊 Resumen
+              </h5>
+              <div style={{ color: '#6ee7b7', fontSize: '14px', lineHeight: 1.4 }}>
+                <div>{deadlineInfo.totalMatches} partidos seleccionados</div>
+                <div>Del {deadlineInfo.matchesSpan.start.toLocaleDateString()}</div>
+                <div>Al {deadlineInfo.matchesSpan.end.toLocaleDateString()}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Match Selection */}
       <div style={{
@@ -388,7 +500,7 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
               fontSize: '14px',
               margin: 0
             }}>
-              Primero importa partidos en la sección "Gestión de Partidos"
+              Primero añade partidos en la sección "Gestión de Partidos"
             </p>
           </div>
         ) : (
@@ -532,13 +644,13 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
             }}>
               {selectedMatches.size} partidos seleccionados
             </p>
-            {deadline && (
+            {deadlineInfo && (
               <p style={{
                 fontSize: '12px',
                 color: 'rgba(255, 255, 255, 0.7)',
                 margin: 0
               }}>
-                Deadline: {new Date(deadline).toLocaleString('es-MX')}
+                Deadline automático: {deadlineInfo.deadline.toLocaleString('es-MX')}
               </p>
             )}
             

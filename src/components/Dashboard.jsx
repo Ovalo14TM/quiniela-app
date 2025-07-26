@@ -1,41 +1,31 @@
-// src/components/Dashboard.jsx - Versión con diseño mejorado
-import React, { useState } from 'react';
+// src/components/Dashboard.jsx - Con historial y estadísticas habilitadas
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useUser } from '../hooks/useUser';
-import AdminPanel from './admin/AdminPanel';
 import PredictionsForm from './user/PredictionsForm';
-import Rankings from './Rankings';
 import UserPayments from './user/UserPayments';
+import BasicStats from './user/BasicStats'; // ✅ Importar stats
+import Rankings from './Rankings'; // ✅ Importar rankings
+import AdminPanel from './admin/AdminPanel';
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
   const { userProfile, isAdmin, loading } = useUser();
-  const [currentView, setCurrentView] = useState('home');
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-    }
-  };
+  const [activeView, setActiveView] = useState('predictions');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading) {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #2563eb 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
         <div style={{
-          background: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '16px',
-          padding: '40px',
           textAlign: 'center',
-          border: '1px solid rgba(255, 255, 255, 0.2)'
+          color: 'white'
         }}>
           <div style={{
             width: '48px',
@@ -46,7 +36,7 @@ export default function Dashboard() {
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
           }}></div>
-          <p style={{ color: 'white', fontSize: '18px', margin: 0 }}>
+          <p style={{ fontSize: '16px', margin: 0 }}>
             Cargando perfil...
           </p>
         </div>
@@ -54,207 +44,159 @@ export default function Dashboard() {
     );
   }
 
-  const NavButton = ({ viewId, label, icon, onClick, isActive, badge }) => (
+  const navigationItems = [
+    {
+      id: 'predictions',
+      label: 'Quiniela Actual',
+      icon: '🏆',
+      description: 'Hacer predicciones',
+      available: true
+    },
+    {
+      id: 'payments',
+      label: 'Mis Pagos',
+      icon: '💰',
+      description: 'Ver deudas y ganancias',
+      available: true
+    },
+    {
+      id: 'history',
+      label: 'Historial',
+      icon: '📋',
+      description: 'Quinielas pasadas',
+      available: true // ✅ HABILITADO
+    },
+    {
+      id: 'stats',
+      label: 'Estadísticas',
+      icon: '📊',
+      description: 'Mi rendimiento',
+      available: true // ✅ HABILITADO
+    },
+    {
+      id: 'rankings',
+      label: 'Rankings',
+      icon: '🏅',
+      description: 'Ranking global',
+      available: true // ✅ NUEVO
+    }
+  ];
+
+  const adminItems = [
+    {
+      id: 'admin',
+      label: 'Administración',
+      icon: '🔧',
+      description: 'Panel de admin',
+      available: true
+    }
+  ];
+
+  const NavButton = ({ item, isActive, onClick }) => (
     <button
-      onClick={() => onClick(viewId)}
+      onClick={() => onClick(item.id)}
+      disabled={!item.available}
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-        padding: '12px 20px',
-        borderRadius: '12px',
-        border: 'none',
-        fontSize: '14px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        transition: 'all 0.3s ease',
-        position: 'relative',
+        gap: '12px',
+        width: '100%',
+        padding: '16px',
         background: isActive 
-          ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-          : 'rgba(255, 255, 255, 0.1)',
-        color: 'white',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.2)'
+          ? 'rgba(255, 255, 255, 0.2)' 
+          : item.available 
+          ? 'transparent' 
+          : 'rgba(255, 255, 255, 0.05)',
+        border: 'none',
+        borderRadius: '12px',
+        color: item.available ? 'white' : 'rgba(255, 255, 255, 0.4)',
+        cursor: item.available ? 'pointer' : 'not-allowed',
+        transition: 'all 0.3s ease',
+        textAlign: 'left',
+        fontSize: '16px',
+        marginBottom: '8px'
       }}
       onMouseEnter={(e) => {
-        if (!isActive) {
-          e.target.style.background = 'rgba(255, 255, 255, 0.15)';
-          e.target.style.transform = 'translateY(-2px)';
+        if (item.available && !isActive) {
+          e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+          e.target.style.transform = 'translateX(4px)';
         }
       }}
       onMouseLeave={(e) => {
-        if (!isActive) {
-          e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-          e.target.style.transform = 'translateY(0)';
+        if (item.available && !isActive) {
+          e.target.style.background = 'transparent';
+          e.target.style.transform = 'translateX(0)';
         }
       }}
     >
-      <span style={{ fontSize: '18px' }}>{icon}</span>
-      <span>{label}</span>
-      {badge > 0 && (
-        <span style={{
-          position: 'absolute',
-          top: '-6px',
-          right: '-6px',
-          background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-          color: 'white',
-          fontSize: '10px',
-          fontWeight: 'bold',
-          borderRadius: '50%',
-          width: '20px',
-          height: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: '2px solid rgba(255, 255, 255, 0.3)'
+      <span style={{ fontSize: '24px' }}>{item.icon}</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
+          {item.label}
+        </div>
+        <div style={{ 
+          fontSize: '12px', 
+          opacity: 0.8,
+          color: item.available ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.3)'
         }}>
-          {badge}
+          {item.available ? item.description : 'Próximamente'}
+        </div>
+      </div>
+      {!item.available && (
+        <span style={{ 
+          fontSize: '12px',
+          background: 'rgba(255, 255, 255, 0.1)',
+          padding: '2px 6px',
+          borderRadius: '4px'
+        }}>
+          🔒
         </span>
       )}
     </button>
   );
 
-  const StatCard = ({ title, value, subtitle, icon, color, trend }) => (
-    <div style={{
-      background: 'rgba(255, 255, 255, 0.1)',
-      backdropFilter: 'blur(20px)',
-      borderRadius: '16px',
-      padding: '24px',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
-      position: 'relative',
-      overflow: 'hidden',
-      cursor: 'pointer',
-      transition: 'all 0.3s ease'
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.transform = 'translateY(-4px)';
-      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.transform = 'translateY(0)';
-      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-    }}
-    >
-      {/* Background gradient */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        width: '60px',
-        height: '60px',
-        background: `linear-gradient(135deg, ${color}40 0%, ${color}20 100%)`,
-        borderRadius: '0 16px 0 100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <span style={{ fontSize: '24px', filter: 'brightness(1.2)' }}>{icon}</span>
-      </div>
-      
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <p style={{
-          color: 'rgba(255, 255, 255, 0.8)',
-          fontSize: '14px',
-          fontWeight: '500',
-          margin: '0 0 8px 0'
-        }}>
-          {title}
-        </p>
-        <h3 style={{
-          color: 'white',
-          fontSize: '32px',
-          fontWeight: 'bold',
-          margin: '0 0 4px 0',
-          lineHeight: 1
-        }}>
-          {value}
-        </h3>
-        <p style={{
-          color: 'rgba(255, 255, 255, 0.7)',
-          fontSize: '12px',
-          margin: 0
-        }}>
-          {subtitle}
-        </p>
-        {trend && (
-          <div style={{
-            marginTop: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}>
-            <span style={{ 
-              fontSize: '12px',
-              color: trend > 0 ? '#10b981' : '#ef4444'
-            }}>
-              {trend > 0 ? '↗️' : '↘️'} {Math.abs(trend)}%
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      position: 'relative'
+      background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #2563eb 100%)',
+      display: 'flex'
     }}>
-      {/* Background decorative elements */}
+      {/* Sidebar */}
       <div style={{
-        position: 'fixed',
-        inset: 0,
+        width: window.innerWidth < 768 ? (sidebarOpen ? '280px' : '0') : '280px',
+        background: 'rgba(0, 0, 0, 0.3)',
+        backdropFilter: 'blur(10px)',
+        transition: 'all 0.3s ease',
         overflow: 'hidden',
-        pointerEvents: 'none',
-        zIndex: 1
+        position: window.innerWidth < 768 ? 'fixed' : 'relative',
+        height: '100vh',
+        zIndex: 1000
       }}>
-        <div style={{
-          position: 'absolute',
-          top: '-200px',
-          right: '-200px',
-          width: '400px',
-          height: '400px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '50%',
-          animation: 'pulse 6s ease-in-out infinite'
-        }}></div>
-        <div style={{
-          position: 'absolute',
-          bottom: '-150px',
-          left: '-150px',
-          width: '300px',
-          height: '300px',
-          background: 'rgba(255, 255, 255, 0.03)',
-          borderRadius: '50%',
-          animation: 'pulse 8s ease-in-out infinite'
-        }}></div>
-      </div>
-
-      {/* Header */}
-      <header style={{
-        position: 'relative',
-        zIndex: 10,
-        background: 'rgba(255, 255, 255, 0.1)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
-      }}>
-        <div style={{
-          maxWidth: '1280px',
-          margin: '0 auto',
-          padding: '0 24px'
-        }}>
+        <div style={{ padding: '24px' }}>
+          {/* Header del Sidebar */}
           <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            height: '80px'
+            borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+            paddingBottom: '20px',
+            marginBottom: '20px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '12px'
+            }}>
               <div style={{
                 width: '48px',
                 height: '48px',
-                background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 borderRadius: '12px',
                 display: 'flex',
                 alignItems: 'center',
@@ -263,321 +205,226 @@ export default function Dashboard() {
               }}>
                 🏆
               </div>
-              <h1 style={{
-                fontSize: '24px',
-                fontWeight: 'bold',
-                color: 'white',
-                margin: 0
-              }}>
-                Quiniela Primos
-              </h1>
-              
-              {/* Desktop Navigation */}
-              <nav style={{
-                display: 'flex',
-                gap: '8px',
-                marginLeft: '32px'
-              }}>
-                <NavButton
-                  viewId="home"
-                  label="Inicio"
-                  icon="🏠"
-                  onClick={setCurrentView}
-                  isActive={currentView === 'home'}
-                />
-                {isAdmin && (
-                  <NavButton
-                    viewId="admin"
-                    label="Admin"
-                    icon="🔧"
-                    onClick={setCurrentView}
-                    isActive={currentView === 'admin'}
-                  />
-                )}
-                <NavButton
-                  viewId="rankings"
-                  label="Rankings"
-                  icon="🏆"
-                  onClick={setCurrentView}
-                  isActive={currentView === 'rankings'}
-                />
-                <NavButton
-                  viewId="payments"
-                  label="Pagos"
-                  icon="💰"
-                  onClick={setCurrentView}
-                  isActive={currentView === 'payments'}
-                  badge={0} // Aquí puedes pasar el número de pagos pendientes
-                />
-              </nav>
-            </div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '12px',
-                padding: '12px 16px',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
-              }}>
-                <div style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
+              <div>
+                <h2 style={{
                   color: 'white',
-                  margin: '0 0 2px 0'
-                }}>
-                  {userProfile?.name || currentUser?.email.split('@')[0]}
-                </div>
-                <div style={{
-                  fontSize: '12px',
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '20px',
+                  fontWeight: 'bold',
                   margin: 0
                 }}>
-                  {userProfile?.role === 'admin' ? '👑 Admin' : '👤 Usuario'}
-                </div>
+                  Quiniela Primos
+                </h2>
+                <p style={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '12px',
+                  margin: 0
+                }}>
+                  {userProfile?.name || 'Usuario'}
+                  {isAdmin && (
+                    <span style={{
+                      marginLeft: '8px',
+                      background: 'rgba(139, 92, 246, 0.3)',
+                      color: '#a855f7',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontSize: '10px',
+                      fontWeight: 'bold'
+                    }}>
+                      ADMIN
+                    </span>
+                  )}
+                </p>
               </div>
-              <button
-                onClick={handleLogout}
-                style={{
-                  background: 'rgba(239, 68, 68, 0.2)',
-                  border: '1px solid rgba(239, 68, 68, 0.4)',
-                  borderRadius: '8px',
-                  padding: '8px 12px',
-                  color: '#fca5a5',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = 'rgba(239, 68, 68, 0.3)';
-                  e.target.style.color = 'white';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = 'rgba(239, 68, 68, 0.2)';
-                  e.target.style.color = '#fca5a5';
-                }}
-              >
-                Salir
-              </button>
             </div>
           </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main style={{
-        position: 'relative',
-        zIndex: 5,
-        maxWidth: '1280px',
-        margin: '0 auto',
-        padding: '32px 24px'
-      }}>
-        {/* Home View */}
-        {currentView === 'home' && (
-          <div style={{ animation: 'fadeIn 0.6s ease-out' }}>
-            {/* Welcome Section */}
+          {/* Navegación Principal */}
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              margin: '0 0 12px 0',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              📱 Principal
+            </h3>
+            {navigationItems.map(item => (
+              <NavButton
+                key={item.id}
+                item={item}
+                isActive={activeView === item.id}
+                onClick={setActiveView}
+              />
+            ))}
+          </div>
+
+          {/* Navegación Admin */}
+          {isAdmin && (
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                margin: '0 0 12px 0',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                👑 Administración
+              </h3>
+              {adminItems.map(item => (
+                <NavButton
+                  key={item.id}
+                  item={item}
+                  isActive={activeView === item.id}
+                  onClick={setActiveView}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Usuario y Logout */}
+          <div style={{
+            position: 'absolute',
+            bottom: '24px',
+            left: '24px',
+            right: '24px'
+          }}>
             <div style={{
               background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(20px)',
-              borderRadius: '20px',
-              padding: '32px',
-              marginBottom: '32px',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              textAlign: 'center'
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '12px'
             }}>
               <div style={{
-                width: '80px',
-                height: '80px',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                borderRadius: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '40px',
-                margin: '0 auto 20px',
-                animation: 'bounce 2s ease-in-out infinite'
-              }}>
-                🎯
-              </div>
-              <h2 style={{
-                fontSize: '32px',
-                fontWeight: 'bold',
                 color: 'white',
-                margin: '0 0 12px 0'
+                fontSize: '14px',
+                fontWeight: 'bold',
+                marginBottom: '4px'
               }}>
-                ¡Bienvenido {userProfile?.name}!
-              </h2>
-              <p style={{
-                color: 'rgba(255, 255, 255, 0.8)',
-                fontSize: '18px',
-                margin: '0 0 24px 0'
+                📧 {currentUser.email}
+              </div>
+              <div style={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '12px'
               }}>
-                {isAdmin 
-                  ? 'Panel de administrador - Gestiona quinielas y usuarios' 
-                  : 'Sistema de apuestas entre primos'
-                }
-              </p>
+                🏆 {userProfile?.totalPoints || 0} puntos • 💰 ${userProfile?.totalWinnings || 0}
+              </div>
             </div>
-
-            {/* User Stats */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '24px',
-              marginBottom: '32px'
-            }}>
-              <StatCard
-                title="Puntos Totales"
-                value={userProfile?.totalPoints || 0}
-                subtitle="Acumulados en todas las quinielas"
-                icon="🎯"
-                color="#3b82f6"
-                trend={5}
-              />
-              <StatCard
-                title="Ganancias"
-                value={`$${userProfile?.totalWinnings || 0}`}
-                subtitle="MXN ganados"
-                icon="💰"
-                color="#10b981"
-                trend={-2}
-              />
-              <StatCard
-                title="Quinielas Ganadas"
-                value={userProfile?.quinielasWon || 0}
-                subtitle="Victorias conseguidas"
-                icon="🏆"
-                color="#f59e0b"
-                trend={0}
-              />
-            </div>
-
-            {/* Current Week Section */}
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(20px)',
-              borderRadius: '20px',
-              padding: '24px',
-              border: '1px solid rgba(255, 255, 255, 0.2)'
-            }}>
-              <PredictionsForm />
-            </div>
+            
+            <button
+              onClick={handleLogout}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                borderRadius: '8px',
+                color: '#fca5a5',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(239, 68, 68, 0.3)';
+                e.target.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+                e.target.style.transform = 'translateY(0)';
+              }}
+            >
+              🚪 Cerrar Sesión
+            </button>
           </div>
-        )}
-
-        {/* Admin View */}
-        {currentView === 'admin' && isAdmin && (
-          <div style={{
-            animation: 'slideIn 0.5s ease-out',
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '20px',
-            padding: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
-          }}>
-            <AdminPanel />
-          </div>
-        )}
-
-        {/* Payments View */}
-        {currentView === 'payments' && (
-          <div style={{
-            animation: 'slideIn 0.5s ease-out',
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '20px',
-            padding: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
-          }}>
-            <UserPayments />
-          </div>
-        )}
-
-        {/* Rankings View */}
-        {currentView === 'rankings' && (
-          <div style={{
-            animation: 'slideIn 0.5s ease-out',
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '20px',
-            padding: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
-          }}>
-            <Rankings />
-          </div>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer style={{
-        position: 'relative',
-        zIndex: 10,
-        background: 'rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(10px)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '24px'
-      }}>
-        <div style={{
-          maxWidth: '1280px',
-          margin: '0 auto',
-          textAlign: 'center'
-        }}>
-          <p style={{
-            color: 'rgba(255, 255, 255, 0.7)',
-            fontSize: '14px',
-            margin: '0 0 8px 0'
-          }}>
-            🚀 Quiniela App v0.2 - Sistema de usuarios funcionando
-          </p>
-          <p style={{
-            color: 'rgba(255, 255, 255, 0.6)',
-            fontSize: '12px',
-            margin: 0
-          }}>
-            Usuario: <span style={{ fontWeight: '600', color: 'rgba(255, 255, 255, 0.8)' }}>
-              {userProfile?.name}
-            </span> 
-            {userProfile?.role === 'admin' && (
-              <span style={{ color: '#a855f7' }}> (Administrador)</span>
-            )}
-          </p>
         </div>
-      </footer>
+      </div>
+
+      {/* Main Content */}
+      <div style={{ 
+        flex: 1,
+        padding: '24px',
+        overflow: 'auto'
+      }}>
+        {/* Mobile Header */}
+        {window.innerWidth < 768 && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '24px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            padding: '16px',
+            borderRadius: '12px'
+          }}>
+            <h1 style={{
+              color: 'white',
+              fontSize: '24px',
+              fontWeight: 'bold',
+              margin: 0
+            }}>
+              Quiniela Primos
+            </h1>
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '20px'
+              }}
+            >
+              ☰
+            </button>
+          </div>
+        )}
+
+        {/* Content Area */}
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto'
+        }}>
+          {/* ✅ SECCIONES PRINCIPALES */}
+          {activeView === 'predictions' && <PredictionsForm />}
+          {activeView === 'payments' && <UserPayments />}
+          
+          {/* ✅ HISTORIAL Y ESTADÍSTICAS HABILITADAS */}
+          {activeView === 'history' && <BasicStats />}
+          {activeView === 'stats' && <BasicStats />}
+          {activeView === 'rankings' && <Rankings />}
+          
+          {/* ✅ ADMIN */}
+          {activeView === 'admin' && isAdmin && <AdminPanel />}
+        </div>
+      </div>
+
+      {/* Mobile Overlay */}
+      {window.innerWidth < 768 && sidebarOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999
+          }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* CSS for animations */}
       <style jsx>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 0.1; transform: scale(1); }
-          50% { opacity: 0.2; transform: scale(1.05); }
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(-20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        
-        @keyframes bounce {
-          0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-          40% { transform: translateY(-10px); }
-          60% { transform: translateY(-5px); }
-        }
-
-        /* Mobile responsive */
-        @media (max-width: 768px) {
-          nav {
-            display: none !important;
-          }
         }
       `}</style>
     </div>

@@ -1,4 +1,4 @@
-// src/components/user/PredictionsForm.jsx - Versión con diseño mejorado
+// src/components/user/PredictionsForm.jsx - Versión mejorada con info del primer partido
 import React, { useState, useEffect } from 'react';
 import { getCurrentQuiniela, isQuinielaOpen, getTimeUntilDeadline } from '../../services/quinielaService';
 import { getMatchesByWeek } from '../../services/matchesService';
@@ -14,6 +14,7 @@ export default function PredictionsForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
+  const [firstMatchInfo, setFirstMatchInfo] = useState(null);
 
   useEffect(() => {
     loadCurrentQuiniela();
@@ -47,9 +48,25 @@ export default function PredictionsForm() {
           })
         );
         
-        // Filtrar matches válidos
-        const validMatches = quinielaMatches.filter(match => match != null);
+        // Filtrar matches válidos y ordenar por fecha
+        const validMatches = quinielaMatches
+          .filter(match => match != null)
+          .map(match => ({
+            ...match,
+            date: match.date?.toDate ? match.date.toDate() : new Date(match.date)
+          }))
+          .sort((a, b) => a.date - b.date);
+          
         setMatches(validMatches);
+        
+        // Encontrar información del primer partido
+        if (validMatches.length > 0) {
+          const firstMatch = validMatches[0];
+          setFirstMatchInfo({
+            match: firstMatch,
+            startsIn: getTimeUntilDate(firstMatch.date)
+          });
+        }
         
         // Cargar predicciones existentes del usuario
         const userPredictions = await getUserPredictionsForQuiniela(currentUser.uid, quiniela.id);
@@ -63,6 +80,27 @@ export default function PredictionsForm() {
       console.error('Error loading current quiniela:', error);
     }
     setLoading(false);
+  };
+
+  const getTimeUntilDate = (targetDate) => {
+    const now = new Date();
+    const timeDiff = targetDate.getTime() - now.getTime();
+    
+    if (timeDiff <= 0) {
+      return { expired: true, text: 'Ya comenzó' };
+    }
+    
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) {
+      return { expired: false, text: `En ${days}d ${hours}h ${minutes}m` };
+    } else if (hours > 0) {
+      return { expired: false, text: `En ${hours}h ${minutes}m` };
+    } else {
+      return { expired: false, text: `En ${minutes}m` };
+    }
   };
 
   const handlePredictionChange = (matchId, field, value) => {
@@ -219,7 +257,8 @@ export default function PredictionsForm() {
           flexDirection: window.innerWidth < 768 ? 'column' : 'row',
           justifyContent: 'space-between',
           alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
-          gap: '16px'
+          gap: '16px',
+          marginBottom: '20px'
         }}>
           <div>
             <h2 style={{
@@ -238,7 +277,8 @@ export default function PredictionsForm() {
               alignItems: 'center',
               gap: '24px',
               fontSize: '14px',
-              color: 'rgba(255, 255, 255, 0.8)'
+              color: 'rgba(255, 255, 255, 0.8)',
+              flexWrap: 'wrap'
             }}>
               <span style={{
                 display: 'flex',
@@ -291,14 +331,76 @@ export default function PredictionsForm() {
               color: 'rgba(255, 255, 255, 0.7)',
               margin: 0
             }}>
-              {isOpen ? 'Tiempo restante' : 'Quiniela cerrada'}
+              {isOpen ? 'Tiempo para predecir' : 'Quiniela cerrada'}
             </div>
           </div>
         </div>
+
+        {/* Información del Primer Partido */}
+        {firstMatchInfo && (
+          <div style={{
+            background: firstMatchInfo.startsIn.expired 
+              ? 'rgba(239, 68, 68, 0.2)' 
+              : 'rgba(59, 130, 246, 0.2)',
+            border: `1px solid ${firstMatchInfo.startsIn.expired 
+              ? 'rgba(239, 68, 68, 0.4)' 
+              : 'rgba(59, 130, 246, 0.4)'}`,
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '16px'
+          }}>
+            <h4 style={{
+              fontSize: '16px',
+              fontWeight: 'bold',
+              color: firstMatchInfo.startsIn.expired ? '#fca5a5' : '#93c5fd',
+              margin: '0 0 8px 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              🥇 Primer Partido {firstMatchInfo.startsIn.expired ? '(Ya comenzó)' : firstMatchInfo.startsIn.text}
+            </h4>
+            <div style={{
+              display: 'flex',
+              flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+              justifyContent: 'space-between',
+              alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+              gap: '12px'
+            }}>
+              <div>
+                <div style={{
+                  fontWeight: 'bold',
+                  color: 'white',
+                  fontSize: '16px',
+                  marginBottom: '4px'
+                }}>
+                  {firstMatchInfo.match.homeTeam} vs {firstMatchInfo.match.awayTeam}
+                </div>
+                <div style={{
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '14px'
+                }}>
+                  {firstMatchInfo.match.league} • {firstMatchInfo.match.date.toLocaleString('es-MX')}
+                </div>
+              </div>
+              {!firstMatchInfo.startsIn.expired && (
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  color: 'white'
+                }}>
+                  ⚠️ Deadline: 30 min antes
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         
         {!isOpen && (
           <div style={{
-            marginTop: '16px',
             padding: '16px',
             background: 'rgba(239, 68, 68, 0.2)',
             border: '1px solid rgba(239, 68, 68, 0.4)',
@@ -323,6 +425,7 @@ export default function PredictionsForm() {
         {matches.map((match, index) => {
           const matchPrediction = predictions[match.id] || {};
           const hasValidPrediction = matchPrediction.homeScore !== undefined && matchPrediction.awayScore !== undefined;
+          const isFirstMatch = index === 0;
           
           return (
             <div key={match.id} style={{
@@ -331,9 +434,12 @@ export default function PredictionsForm() {
               borderRadius: '16px',
               padding: '24px',
               marginBottom: '16px',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              border: isFirstMatch 
+                ? '2px solid rgba(59, 130, 246, 0.6)' 
+                : '1px solid rgba(255, 255, 255, 0.2)',
               transition: 'all 0.3s ease',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              position: 'relative'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
@@ -344,6 +450,24 @@ export default function PredictionsForm() {
               e.currentTarget.style.transform = 'translateY(0)';
             }}
             >
+              {/* Badge del primer partido */}
+              {isFirstMatch && (
+                <div style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  left: '16px',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)'
+                }}>
+                  🥇 PRIMER PARTIDO
+                </div>
+              )}
+
               <div style={{
                 display: 'flex',
                 flexDirection: window.innerWidth < 768 ? 'column' : 'row',
@@ -378,6 +502,19 @@ export default function PredictionsForm() {
                     }}>
                       {match.league}
                     </span>
+                    {isFirstMatch && (
+                      <span style={{
+                        background: 'rgba(245, 158, 11, 0.2)',
+                        color: '#fbbf24',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(245, 158, 11, 0.4)'
+                      }}>
+                        ⚠️ Define deadline
+                      </span>
+                    )}
                   </div>
                   
                   <h3 style={{

@@ -1,30 +1,17 @@
-// src/components/admin/MatchesManagement.jsx - Versión con diseño mejorado
+// src/components/admin/MatchesManagement.jsx - Solo partidos manuales
 import React, { useState, useEffect } from 'react';
-import { getAvailableMatches, formatMatchDate, formatMatchScore } from '../../services/footballService';
-import { saveMultipleMatches, getAllAvailableMatches } from '../../services/matchesService';
+import { getAllAvailableMatches, saveMatch } from '../../services/matchesService';
+import { formatMatchDate, formatMatchScore } from '../../services/footballService';
+import { useAuth } from '../../context/AuthContext';
 
 export default function MatchesManagement() {
-  const [apiMatches, setApiMatches] = useState([]);
+  const { currentUser } = useAuth();
   const [savedMatches, setSavedMatches] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [selectedMatches, setSelectedMatches] = useState(new Set());
-  const [activeTab, setActiveTab] = useState('api');
+  const [activeTab, setActiveTab] = useState('saved');
 
   useEffect(() => {
     loadSavedMatches();
   }, []);
-
-  const loadApiMatches = async () => {
-    setLoading(true);
-    try {
-      const matches = await getAvailableMatches();
-      setApiMatches(matches);
-    } catch (error) {
-      console.error('Error loading API matches:', error);
-    }
-    setLoading(false);
-  };
 
   const loadSavedMatches = async () => {
     try {
@@ -32,49 +19,6 @@ export default function MatchesManagement() {
       setSavedMatches(matches);
     } catch (error) {
       console.error('Error loading saved matches:', error);
-    }
-  };
-
-  const handleImportMatches = async () => {
-    if (selectedMatches.size === 0) {
-      alert('Selecciona al menos un partido para importar');
-      return;
-    }
-
-    setImporting(true);
-    try {
-      const matchesToImport = apiMatches.filter(match => selectedMatches.has(match.id));
-      const success = await saveMultipleMatches(matchesToImport);
-      
-      if (success) {
-        alert(`${matchesToImport.length} partidos importados correctamente`);
-        setSelectedMatches(new Set());
-        loadSavedMatches();
-      } else {
-        alert('Error al importar partidos');
-      }
-    } catch (error) {
-      console.error('Error importing matches:', error);
-      alert('Error al importar partidos');
-    }
-    setImporting(false);
-  };
-
-  const toggleMatchSelection = (matchId) => {
-    const newSelected = new Set(selectedMatches);
-    if (newSelected.has(matchId)) {
-      newSelected.delete(matchId);
-    } else {
-      newSelected.add(matchId);
-    }
-    setSelectedMatches(newSelected);
-  };
-
-  const selectAllMatches = () => {
-    if (selectedMatches.size === apiMatches.length) {
-      setSelectedMatches(new Set());
-    } else {
-      setSelectedMatches(new Set(apiMatches.map(match => match.id)));
     }
   };
 
@@ -92,7 +36,6 @@ export default function MatchesManagement() {
         fontWeight: '600',
         cursor: 'pointer',
         transition: 'all 0.3s ease',
-        position: 'relative',
         background: isActive 
           ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
           : 'rgba(255, 255, 255, 0.1)',
@@ -147,80 +90,23 @@ export default function MatchesManagement() {
         border: '1px solid rgba(255, 255, 255, 0.2)'
       }}>
         <div style={{
-          display: 'flex',
-          flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-          justifyContent: 'space-between',
-          alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
-          gap: '16px',
           marginBottom: '20px'
         }}>
-          <div>
-            <h3 style={{
-              fontSize: '24px',
-              fontWeight: 'bold',
-              color: 'white',
-              margin: '0 0 8px 0'
-            }}>
-              ⚽ Gestión de Partidos
-            </h3>
-            <p style={{
-              fontSize: '14px',
-              color: 'rgba(255, 255, 255, 0.8)',
-              margin: 0
-            }}>
-              Importa partidos desde APIs o añádelos manualmente
-            </p>
-          </div>
-          
-          <button
-            onClick={loadApiMatches}
-            disabled={loading}
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              color: 'white',
-              border: 'none',
-              padding: '12px 20px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              opacity: loading ? 0.5 : 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.3)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = 'none';
-              }
-            }}
-          >
-            {loading ? (
-              <>
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  borderTop: '2px solid white',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }}></div>
-                Cargando...
-              </>
-            ) : (
-              <>
-                🔍 Buscar Partidos
-              </>
-            )}
-          </button>
+          <h3 style={{
+            fontSize: '24px',
+            fontWeight: 'bold',
+            color: 'white',
+            margin: '0 0 8px 0'
+          }}>
+            ⚽ Gestión de Partidos
+          </h3>
+          <p style={{
+            fontSize: '14px',
+            color: 'rgba(255, 255, 255, 0.8)',
+            margin: 0
+          }}>
+            Añade partidos manualmente para crear quinielas
+          </p>
         </div>
 
         {/* Tabs */}
@@ -229,14 +115,6 @@ export default function MatchesManagement() {
           flexWrap: 'wrap',
           gap: '8px'
         }}>
-          <TabButton
-            tabId="api"
-            label="Partidos de API"
-            icon="📡"
-            isActive={activeTab === 'api'}
-            onClick={setActiveTab}
-            badge={apiMatches.length}
-          />
           <TabButton
             tabId="saved"
             label="Partidos Guardados"
@@ -247,146 +125,13 @@ export default function MatchesManagement() {
           />
           <TabButton
             tabId="manual"
-            label="Agregar Manual"
-            icon="✍️"
+            label="Agregar Nuevo"
+            icon="➕"
             isActive={activeTab === 'manual'}
             onClick={setActiveTab}
           />
         </div>
       </div>
-
-      {/* Partidos de API */}
-      {activeTab === 'api' && (
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '16px',
-          padding: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          animation: 'fadeIn 0.6s ease-out'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px'
-          }}>
-            <h4 style={{
-              fontSize: '18px',
-              fontWeight: 'bold',
-              color: 'white',
-              margin: 0
-            }}>
-              📡 Partidos Disponibles ({apiMatches.length})
-            </h4>
-            
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={selectAllMatches}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  padding: '8px 12px',
-                  color: 'white',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = 'rgba(255, 255, 255, 0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-                }}
-              >
-                {selectedMatches.size === apiMatches.length ? 'Deseleccionar Todo' : 'Seleccionar Todo'}
-              </button>
-              
-              <button
-                onClick={handleImportMatches}
-                disabled={importing || selectedMatches.size === 0}
-                style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px 16px',
-                  color: 'white',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  opacity: (importing || selectedMatches.size === 0) ? 0.5 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-                onMouseEnter={(e) => {
-                  if (!importing && selectedMatches.size > 0) {
-                    e.target.style.transform = 'translateY(-1px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!importing && selectedMatches.size > 0) {
-                    e.target.style.transform = 'translateY(0)';
-                  }
-                }}
-              >
-                {importing ? (
-                  <>
-                    <div style={{
-                      width: '12px',
-                      height: '12px',
-                      border: '2px solid rgba(255, 255, 255, 0.3)',
-                      borderTop: '2px solid white',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }}></div>
-                    Importando...
-                  </>
-                ) : (
-                  <>
-                    📥 Importar ({selectedMatches.size})
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {apiMatches.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '64px'
-            }}>
-              <div style={{ fontSize: '64px', marginBottom: '16px', opacity: 0.7 }}>
-                📡
-              </div>
-              <p style={{
-                color: 'rgba(255, 255, 255, 0.8)',
-                fontSize: '16px',
-                margin: '0 0 8px 0'
-              }}>
-                {loading ? 'Buscando partidos...' : 'No hay partidos cargados'}
-              </p>
-              <p style={{
-                color: 'rgba(255, 255, 255, 0.6)',
-                fontSize: '14px',
-                margin: 0
-              }}>
-                Haz clic en "Buscar Partidos" para cargar desde las APIs
-              </p>
-            </div>
-          ) : (
-            <MatchTable 
-              matches={apiMatches}
-              selectedMatches={selectedMatches}
-              onToggleMatch={toggleMatchSelection}
-              showSelection={true}
-            />
-          )}
-        </div>
-      )}
 
       {/* Partidos Guardados */}
       {activeTab === 'saved' && (
@@ -457,15 +202,11 @@ export default function MatchesManagement() {
                 fontSize: '14px',
                 margin: 0
               }}>
-                Importa partidos desde APIs o añádelos manualmente
+                Añade partidos manualmente para crear quinielas
               </p>
             </div>
           ) : (
-            <MatchTable 
-              matches={savedMatches}
-              showSelection={false}
-              showActions={true}
-            />
+            <MatchTable matches={savedMatches} />
           )}
         </div>
       )}
@@ -477,11 +218,6 @@ export default function MatchesManagement() {
 
       {/* CSS for animations */}
       <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
@@ -492,7 +228,7 @@ export default function MatchesManagement() {
 }
 
 // Componente para la tabla de partidos
-function MatchTable({ matches, selectedMatches, onToggleMatch, showSelection, showActions }) {
+function MatchTable({ matches }) {
   return (
     <div style={{ overflowX: 'auto' }}>
       <table style={{
@@ -506,22 +242,6 @@ function MatchTable({ matches, selectedMatches, onToggleMatch, showSelection, sh
           <tr style={{
             background: 'rgba(255, 255, 255, 0.1)'
           }}>
-            {showSelection && (
-              <th style={{
-                padding: '16px',
-                textAlign: 'left',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                color: 'rgba(255, 255, 255, 0.9)'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={selectedMatches?.size === matches.length && matches.length > 0}
-                  onChange={() => {}}
-                  style={{ transform: 'scale(1.2)' }}
-                />
-              </th>
-            )}
             <th style={{
               padding: '16px',
               textAlign: 'left',
@@ -550,15 +270,6 @@ function MatchTable({ matches, selectedMatches, onToggleMatch, showSelection, sh
               fontWeight: 'bold',
               color: 'rgba(255, 255, 255, 0.9)'
             }}>Estado</th>
-            {showActions && (
-              <th style={{
-                padding: '16px',
-                textAlign: 'left',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                color: 'rgba(255, 255, 255, 0.9)'
-              }}>Acciones</th>
-            )}
           </tr>
         </thead>
         <tbody>
@@ -574,16 +285,6 @@ function MatchTable({ matches, selectedMatches, onToggleMatch, showSelection, sh
               e.currentTarget.style.background = 'transparent';
             }}
             >
-              {showSelection && (
-                <td style={{ padding: '16px' }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedMatches?.has(match.id) || false}
-                    onChange={() => onToggleMatch(match.id)}
-                    style={{ transform: 'scale(1.2)' }}
-                  />
-                </td>
-              )}
               <td style={{
                 padding: '16px',
                 color: 'white'
@@ -638,31 +339,6 @@ function MatchTable({ matches, selectedMatches, onToggleMatch, showSelection, sh
                    match.status === 'LIVE' ? '🟡 En Vivo' : '⏳ Programado'}
                 </span>
               </td>
-              {showActions && (
-                <td style={{ padding: '16px' }}>
-                  <button
-                    style={{
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'translateY(0)';
-                    }}
-                  >
-                    ✏️ Editar
-                  </button>
-                </td>
-              )}
             </tr>
           ))}
         </tbody>
@@ -673,6 +349,7 @@ function MatchTable({ matches, selectedMatches, onToggleMatch, showSelection, sh
 
 // Componente para agregar partidos manualmente
 function ManualMatchForm({ onMatchAdded }) {
+  const { currentUser } = useAuth();
   const [formData, setFormData] = useState({
     homeTeam: '',
     awayTeam: '',
@@ -680,12 +357,78 @@ function ManualMatchForm({ onMatchAdded }) {
     date: '',
     time: ''
   });
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = (e) => {
+  // Establecer fecha y hora por defecto
+  useEffect(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const dateString = tomorrow.toISOString().split('T')[0];
+    setFormData(prev => ({
+      ...prev,
+      date: dateString,
+      time: '15:00' // 3:00 PM por defecto
+    }));
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Aquí iría la lógica para guardar el partido manual
-    console.log('Guardar partido manual:', formData);
-    onMatchAdded();
+    
+    if (!formData.homeTeam || !formData.awayTeam || !formData.league || !formData.date || !formData.time) {
+      alert('Por favor completa todos los campos');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Crear objeto Date combinando fecha y hora
+      const matchDate = new Date(`${formData.date}T${formData.time}:00`);
+      
+      const matchData = {
+        id: `manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        homeTeam: formData.homeTeam.trim(),
+        awayTeam: formData.awayTeam.trim(),
+        league: formData.league.trim(),
+        date: matchDate,
+        source: 'manual',
+        status: 'SCHEDULED',
+        homeScore: null,
+        awayScore: null,
+        createdBy: currentUser.uid,
+        createdAt: new Date()
+      };
+
+      await saveMatch(matchData);
+      
+      alert('✅ Partido agregado correctamente');
+      
+      // Reset form
+      setFormData({
+        homeTeam: '',
+        awayTeam: '',
+        league: '',
+        date: '',
+        time: ''
+      });
+      
+      // Establecer nueva fecha por defecto
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const dateString = tomorrow.toISOString().split('T')[0];
+      setFormData(prev => ({
+        ...prev,
+        date: dateString,
+        time: '15:00'
+      }));
+      
+      onMatchAdded();
+      
+    } catch (error) {
+      console.error('Error saving match:', error);
+      alert('❌ Error al agregar el partido');
+    }
+    setSaving(false);
   };
 
   const handleChange = (field, value) => {
@@ -710,7 +453,7 @@ function ManualMatchForm({ onMatchAdded }) {
         color: 'white',
         margin: '0 0 16px 0'
       }}>
-        ✍️ Agregar Partido Manualmente
+        ➕ Agregar Nuevo Partido
       </h4>
       
       <form onSubmit={handleSubmit} style={{
@@ -744,6 +487,14 @@ function ManualMatchForm({ onMatchAdded }) {
             }}
             placeholder="Ej: Real Madrid"
             required
+            onFocus={(e) => {
+              e.target.style.borderColor = '#3b82f6';
+              e.target.style.background = 'white';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+              e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+            }}
           />
         </div>
 
@@ -773,6 +524,14 @@ function ManualMatchForm({ onMatchAdded }) {
             }}
             placeholder="Ej: FC Barcelona"
             required
+            onFocus={(e) => {
+              e.target.style.borderColor = '#3b82f6';
+              e.target.style.background = 'white';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+              e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+            }}
           />
         </div>
 
@@ -784,7 +543,7 @@ function ManualMatchForm({ onMatchAdded }) {
             fontWeight: '600',
             marginBottom: '8px'
           }}>
-            🏆 Liga
+            🏆 Liga/Competición
           </label>
           <input
             type="text"
@@ -800,8 +559,16 @@ function ManualMatchForm({ onMatchAdded }) {
               outline: 'none',
               transition: 'all 0.3s ease'
             }}
-            placeholder="Ej: La Liga"
+            placeholder="Ej: La Liga, Champions League"
             required
+            onFocus={(e) => {
+              e.target.style.borderColor = '#3b82f6';
+              e.target.style.background = 'white';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+              e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+            }}
           />
         </div>
 
@@ -830,6 +597,14 @@ function ManualMatchForm({ onMatchAdded }) {
               transition: 'all 0.3s ease'
             }}
             required
+            onFocus={(e) => {
+              e.target.style.borderColor = '#3b82f6';
+              e.target.style.background = 'white';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+              e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+            }}
           />
         </div>
 
@@ -858,6 +633,14 @@ function ManualMatchForm({ onMatchAdded }) {
               transition: 'all 0.3s ease'
             }}
             required
+            onFocus={(e) => {
+              e.target.style.borderColor = '#3b82f6';
+              e.target.style.background = 'white';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+              e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+            }}
           />
         </div>
 
@@ -869,6 +652,7 @@ function ManualMatchForm({ onMatchAdded }) {
         }}>
           <button
             type="submit"
+            disabled={saving}
             style={{
               background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               color: 'white',
@@ -881,21 +665,50 @@ function ManualMatchForm({ onMatchAdded }) {
               transition: 'all 0.3s ease',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              opacity: saving ? 0.5 : 1
             }}
             onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 8px 25px rgba(16, 185, 129, 0.3)';
+              if (!saving) {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 25px rgba(16, 185, 129, 0.3)';
+              }
             }}
             onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = 'none';
+              if (!saving) {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }
             }}
           >
-            ➕ Agregar Partido
+            {saving ? (
+              <>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  borderTop: '2px solid white',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }}></div>
+                Guardando...
+              </>
+            ) : (
+              <>
+                ➕ Agregar Partido
+              </>
+            )}
           </button>
         </div>
       </form>
+
+      {/* CSS for animations */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
