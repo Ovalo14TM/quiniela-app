@@ -5,6 +5,9 @@ import { getMatchesByWeek } from '../../services/matchesService';
 import { getUserPredictionsForQuiniela, savePrediction } from '../../services/predictionsService';
 import { formatMatchDate } from '../../services/footballService';
 import { useAuth } from '../../context/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../services/firebase';
+
 
 export default function PredictionsForm() {
   const { currentUser } = useAuth();
@@ -41,13 +44,17 @@ export default function PredictionsForm() {
         setCurrentQuiniela(quiniela);
         
         // Cargar partidos de la quiniela
-        const quinielaMatches = await Promise.all(
-          quiniela.matches.map(async (matchId) => {
-            const matchesFromWeek = await getMatchesByWeek(quiniela.id);
-            return matchesFromWeek.find(m => m.id === matchId);
-          })
-        );
-        
+   const quinielaMatches = await Promise.all(
+  quiniela.matches.map(async (matchId) => {
+    const matchRef = doc(db, 'matches', matchId);
+    const matchSnap = await getDoc(matchRef);
+    
+    if (matchSnap.exists()) {
+      return { id: matchSnap.id, ...matchSnap.data() };
+    }
+    return null;
+  })
+);
         // Filtrar matches válidos y ordenar por fecha
         const validMatches = quinielaMatches
           .filter(match => match != null)

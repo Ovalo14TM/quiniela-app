@@ -109,50 +109,27 @@ const scheduleQuinielaNotifications = async (quinielaId, quinielaData) => {
   }
 };
 
-// Obtener quiniela por ID
-export const getQuiniela = async (quinielaId) => {
+export const getCurrentQuiniela = async () => {
   try {
-    const quinielaRef = doc(db, 'quinielas', quinielaId);
+    // Obtener directamente la quiniela que creaste
+    const quinielaRef = doc(db, 'quinielas', 'week_2025_30');
     const quinielaSnap = await getDoc(quinielaRef);
     
     if (quinielaSnap.exists()) {
-      return { id: quinielaSnap.id, ...quinielaSnap.data() };
+      const quinielaData = { id: quinielaSnap.id, ...quinielaSnap.data() };
+      console.log('✅ Quiniela cargada:', quinielaData.title);
+      return quinielaData;
     }
+    
+    console.log('❌ No se encontró la quiniela');
     return null;
   } catch (error) {
-    console.error('Error getting quiniela:', error);
+    console.error('Error:', error);
     return null;
   }
 };
 
-// Obtener quiniela actual (más reciente y activa)
-export const getCurrentQuiniela = async () => {
-  try {
-    const quinielasRef = collection(db, 'quinielas');
-    const q = query(
-      quinielasRef,
-      where('isActive', '==', true),
-      orderBy('createdAt', 'desc')
-    );
-    
-    const querySnapshot = await getDocs(q);
-    
-    if (!querySnapshot.empty) {
-      const doc = querySnapshot.docs[0];
-      const quinielaData = { id: doc.id, ...doc.data() };
-      
-      // Verificar si la quiniela debe cerrarse automáticamente
-      await checkAndUpdateQuinielaStatus(quinielaData);
-      
-      return quinielaData;
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error getting current quiniela:', error);
-    return null;
-  }
-};
+
 
 // Verificar y actualizar el estado de la quiniela automáticamente
 const checkAndUpdateQuinielaStatus = async (quiniela) => {
