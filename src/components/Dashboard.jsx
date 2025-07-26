@@ -1,4 +1,4 @@
-// src/components/Dashboard.jsx
+// src/components/Dashboard.jsx - Versión con diseño mejorado
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useUser } from '../hooks/useUser';
@@ -22,56 +22,262 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando perfil...</p>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '16px',
+          padding: '40px',
+          textAlign: 'center',
+          border: '1px solid rgba(255, 255, 255, 0.2)'
+        }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            border: '4px solid rgba(255, 255, 255, 0.3)',
+            borderTop: '4px solid white',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }}></div>
+          <p style={{ color: 'white', fontSize: '18px', margin: 0 }}>
+            Cargando perfil...
+          </p>
         </div>
       </div>
     );
   }
 
-  const NavButton = ({ viewId, label, icon, onClick, isActive }) => (
+  const NavButton = ({ viewId, label, icon, onClick, isActive, badge }) => (
     <button
       onClick={() => onClick(viewId)}
-      className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-        isActive
-          ? 'bg-blue-500 text-white'
-          : 'text-gray-700 hover:bg-gray-100'
-      }`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '12px 20px',
+        borderRadius: '12px',
+        border: 'none',
+        fontSize: '14px',
+        fontWeight: '600',
+        cursor: 'pointer',
+        transition: 'all 0.3s ease',
+        position: 'relative',
+        background: isActive 
+          ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+          : 'rgba(255, 255, 255, 0.1)',
+        color: 'white',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      }}
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          e.target.style.background = 'rgba(255, 255, 255, 0.15)';
+          e.target.style.transform = 'translateY(-2px)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+          e.target.style.transform = 'translateY(0)';
+        }
+      }}
     >
-      <span>{icon}</span>
+      <span style={{ fontSize: '18px' }}>{icon}</span>
       <span>{label}</span>
+      {badge > 0 && (
+        <span style={{
+          position: 'absolute',
+          top: '-6px',
+          right: '-6px',
+          background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+          color: 'white',
+          fontSize: '10px',
+          fontWeight: 'bold',
+          borderRadius: '50%',
+          width: '20px',
+          height: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '2px solid rgba(255, 255, 255, 0.3)'
+        }}>
+          {badge}
+        </span>
+      )}
     </button>
   );
 
+  const StatCard = ({ title, value, subtitle, icon, color, trend }) => (
+    <div style={{
+      background: 'rgba(255, 255, 255, 0.1)',
+      backdropFilter: 'blur(20px)',
+      borderRadius: '16px',
+      padding: '24px',
+      border: '1px solid rgba(255, 255, 255, 0.2)',
+      position: 'relative',
+      overflow: 'hidden',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease'
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform = 'translateY(-4px)';
+      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+    }}
+    >
+      {/* Background gradient */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: '60px',
+        height: '60px',
+        background: `linear-gradient(135deg, ${color}40 0%, ${color}20 100%)`,
+        borderRadius: '0 16px 0 100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <span style={{ fontSize: '24px', filter: 'brightness(1.2)' }}>{icon}</span>
+      </div>
+      
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <p style={{
+          color: 'rgba(255, 255, 255, 0.8)',
+          fontSize: '14px',
+          fontWeight: '500',
+          margin: '0 0 8px 0'
+        }}>
+          {title}
+        </p>
+        <h3 style={{
+          color: 'white',
+          fontSize: '32px',
+          fontWeight: 'bold',
+          margin: '0 0 4px 0',
+          lineHeight: 1
+        }}>
+          {value}
+        </h3>
+        <p style={{
+          color: 'rgba(255, 255, 255, 0.7)',
+          fontSize: '12px',
+          margin: 0
+        }}>
+          {subtitle}
+        </p>
+        {trend && (
+          <div style={{
+            marginTop: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}>
+            <span style={{ 
+              fontSize: '12px',
+              color: trend > 0 ? '#10b981' : '#ef4444'
+            }}>
+              {trend > 0 ? '↗️' : '↘️'} {Math.abs(trend)}%
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      position: 'relative'
+    }}>
+      {/* Background decorative elements */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        zIndex: 1
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: '-200px',
+          right: '-200px',
+          width: '400px',
+          height: '400px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: '50%',
+          animation: 'pulse 6s ease-in-out infinite'
+        }}></div>
+        <div style={{
+          position: 'absolute',
+          bottom: '-150px',
+          left: '-150px',
+          width: '300px',
+          height: '300px',
+          background: 'rgba(255, 255, 255, 0.03)',
+          borderRadius: '50%',
+          animation: 'pulse 8s ease-in-out infinite'
+        }}></div>
+      </div>
+
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-bold text-gray-900">
-                🏆 Quiniela
+      <header style={{
+        position: 'relative',
+        zIndex: 10,
+        background: 'rgba(255, 255, 255, 0.1)',
+        backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+      }}>
+        <div style={{
+          maxWidth: '1280px',
+          margin: '0 auto',
+          padding: '0 24px'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            height: '80px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px'
+              }}>
+                🏆
+              </div>
+              <h1 style={{
+                fontSize: '24px',
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0
+              }}>
+                Quiniela Primos
               </h1>
               
-              {/* Navigation */}
-              <nav className="hidden md:flex space-x-2">
-                <NavButton
-              viewId="payments"
-              label="Pagos"
-              icon="💰"
-              onClick={setCurrentView}
-              isActive={currentView === 'payments'}
-            />
-            <NavButton
-                  viewId="payments"
-                  label="Pagos"
-                  icon="💰"
-                  onClick={setCurrentView}
-                  isActive={currentView === 'payments'}
-                />
+              {/* Desktop Navigation */}
+              <nav style={{
+                display: 'flex',
+                gap: '8px',
+                marginLeft: '32px'
+              }}>
                 <NavButton
                   viewId="home"
                   label="Inicio"
@@ -95,150 +301,285 @@ export default function Dashboard() {
                   onClick={setCurrentView}
                   isActive={currentView === 'rankings'}
                 />
+                <NavButton
+                  viewId="payments"
+                  label="Pagos"
+                  icon="💰"
+                  onClick={setCurrentView}
+                  isActive={currentView === 'payments'}
+                  badge={0} // Aquí puedes pasar el número de pagos pendientes
+                />
               </nav>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                border: '1px solid rgba(255, 255, 255, 0.2)'
+              }}>
+                <div style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: 'white',
+                  margin: '0 0 2px 0'
+                }}>
                   {userProfile?.name || currentUser?.email.split('@')[0]}
                 </div>
-                <div className="text-xs text-gray-600">
+                <div style={{
+                  fontSize: '12px',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  margin: 0
+                }}>
                   {userProfile?.role === 'admin' ? '👑 Admin' : '👤 Usuario'}
                 </div>
               </div>
               <button
                 onClick={handleLogout}
-                className="text-sm text-red-600 hover:text-red-700 font-medium"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  color: '#fca5a5',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'rgba(239, 68, 68, 0.3)';
+                  e.target.style.color = 'white';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+                  e.target.style.color = '#fca5a5';
+                }}
               >
-                Cerrar Sesión
+                Salir
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile Navigation */}
-      <div className="md:hidden bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-2">
-          <div className="flex space-x-2 overflow-x-auto">
-            <NavButton
-              viewId="home"
-              label="Inicio"
-              icon="🏠"
-              onClick={setCurrentView}
-              isActive={currentView === 'home'}
-            />
-            {isAdmin && (
-              <NavButton
-                viewId="admin"
-                label="Admin"
-                icon="🔧"
-                onClick={setCurrentView}
-                isActive={currentView === 'admin'}
-              />
-            )}
-            <NavButton
-              viewId="rankings"
-              label="Rankings"
-              icon="🏆"
-              onClick={setCurrentView}
-              isActive={currentView === 'rankings'}
-            />
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main style={{
+        position: 'relative',
+        zIndex: 5,
+        maxWidth: '1280px',
+        margin: '0 auto',
+        padding: '32px 24px'
+      }}>
         {/* Home View */}
         {currentView === 'home' && (
-          <>
+          <div style={{ animation: 'fadeIn 0.6s ease-out' }}>
             {/* Welcome Section */}
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  ¡Bienvenido {userProfile?.name}! 🎯
-                </h2>
-                <p className="text-gray-600 mb-4">
-                  {isAdmin 
-                    ? 'Panel de administrador - Gestiona quinielas y usuarios' 
-                    : 'Sistema de apuestas entre primos'}
-                </p>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-blue-800 text-sm">
-                    ✅ Sistema de usuarios y roles funcionando<br/>
-                    ✅ Perfiles de usuario creados automáticamente<br/>
-                    {isAdmin && '✅ Panel de administración disponible'}<br/>
-                    🚧 Próximo: Sistema de partidos y quinielas
-                  </p>
-                </div>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '20px',
+              padding: '32px',
+              marginBottom: '32px',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                borderRadius: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '40px',
+                margin: '0 auto 20px',
+                animation: 'bounce 2s ease-in-out infinite'
+              }}>
+                🎯
               </div>
+              <h2 style={{
+                fontSize: '32px',
+                fontWeight: 'bold',
+                color: 'white',
+                margin: '0 0 12px 0'
+              }}>
+                ¡Bienvenido {userProfile?.name}!
+              </h2>
+              <p style={{
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontSize: '18px',
+                margin: '0 0 24px 0'
+              }}>
+                {isAdmin 
+                  ? 'Panel de administrador - Gestiona quinielas y usuarios' 
+                  : 'Sistema de apuestas entre primos'
+                }
+              </p>
             </div>
 
             {/* User Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600 mb-2">
-                    {userProfile?.totalPoints || 0}
-                  </div>
-                  <div className="text-sm text-gray-600">Puntos Totales</div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600 mb-2">
-                    ${userProfile?.totalWinnings || 0}
-                  </div>
-                  <div className="text-sm text-gray-600">Ganancias (MXN)</div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-orange-600 mb-2">
-                    {userProfile?.quinielasWon || 0}
-                  </div>
-                  <div className="text-sm text-gray-600">Quinielas Ganadas</div>
-                </div>
-              </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '24px',
+              marginBottom: '32px'
+            }}>
+              <StatCard
+                title="Puntos Totales"
+                value={userProfile?.totalPoints || 0}
+                subtitle="Acumulados en todas las quinielas"
+                icon="🎯"
+                color="#3b82f6"
+                trend={5}
+              />
+              <StatCard
+                title="Ganancias"
+                value={`$${userProfile?.totalWinnings || 0}`}
+                subtitle="MXN ganados"
+                icon="💰"
+                color="#10b981"
+                trend={-2}
+              />
+              <StatCard
+                title="Quinielas Ganadas"
+                value={userProfile?.quinielasWon || 0}
+                subtitle="Victorias conseguidas"
+                icon="🏆"
+                color="#f59e0b"
+                trend={0}
+              />
             </div>
 
             {/* Current Week Section */}
-            <PredictionsForm />
-          </>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '20px',
+              padding: '24px',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>
+              <PredictionsForm />
+            </div>
+          </div>
         )}
 
         {/* Admin View */}
         {currentView === 'admin' && isAdmin && (
-          <AdminPanel />
+          <div style={{
+            animation: 'slideIn 0.5s ease-out',
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '20px',
+            padding: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }}>
+            <AdminPanel />
+          </div>
         )}
 
         {/* Payments View */}
         {currentView === 'payments' && (
-          <UserPayments />
+          <div style={{
+            animation: 'slideIn 0.5s ease-out',
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '20px',
+            padding: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }}>
+            <UserPayments />
+          </div>
         )}
 
         {/* Rankings View */}
         {currentView === 'rankings' && (
-          <Rankings />
+          <div style={{
+            animation: 'slideIn 0.5s ease-out',
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '20px',
+            padding: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }}>
+            <Rankings />
+          </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t mt-8">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-sm text-gray-500">
-            <p>🚀 Quiniela App v0.2 - Sistema de usuarios funcionando</p>
-            <p className="mt-1">
-              Usuario: <span className="font-medium">{userProfile?.name}</span> 
-              {userProfile?.role === 'admin' && <span className="text-purple-600"> (Administrador)</span>}
-            </p>
-          </div>
+      <footer style={{
+        position: 'relative',
+        zIndex: 10,
+        background: 'rgba(255, 255, 255, 0.05)',
+        backdropFilter: 'blur(10px)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        padding: '24px'
+      }}>
+        <div style={{
+          maxWidth: '1280px',
+          margin: '0 auto',
+          textAlign: 'center'
+        }}>
+          <p style={{
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: '14px',
+            margin: '0 0 8px 0'
+          }}>
+            🚀 Quiniela App v0.2 - Sistema de usuarios funcionando
+          </p>
+          <p style={{
+            color: 'rgba(255, 255, 255, 0.6)',
+            fontSize: '12px',
+            margin: 0
+          }}>
+            Usuario: <span style={{ fontWeight: '600', color: 'rgba(255, 255, 255, 0.8)' }}>
+              {userProfile?.name}
+            </span> 
+            {userProfile?.role === 'admin' && (
+              <span style={{ color: '#a855f7' }}> (Administrador)</span>
+            )}
+          </p>
         </div>
       </footer>
+
+      {/* CSS for animations */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+          0%, 100% { opacity: 0.1; transform: scale(1); }
+          50% { opacity: 0.2; transform: scale(1.05); }
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(-20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        
+        @keyframes bounce {
+          0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+          40% { transform: translateY(-10px); }
+          60% { transform: translateY(-5px); }
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+          nav {
+            display: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

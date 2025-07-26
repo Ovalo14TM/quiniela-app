@@ -1,4 +1,4 @@
-// src/components/admin/CreateQuiniela.jsx
+// src/components/admin/CreateQuiniela.jsx - Versión con diseño mejorado
 import React, { useState, useEffect } from 'react';
 import { getAllAvailableMatches } from '../../services/matchesService';
 import { createWeeklyQuiniela, getCurrentWeekNumber } from '../../services/quinielaService';
@@ -116,26 +116,69 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-        <p className="text-gray-600">Cargando partidos...</p>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '64px',
+        textAlign: 'center'
+      }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          border: '4px solid rgba(255, 255, 255, 0.3)',
+          borderTop: '4px solid white',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          marginBottom: '16px'
+        }}></div>
+        <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '16px', margin: 0 }}>
+          Cargando partidos...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div style={{ color: 'white' }}>
       {/* Form Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.1)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: '16px',
+        padding: '24px',
+        marginBottom: '24px',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      }}>
+        <h3 style={{
+          fontSize: '24px',
+          fontWeight: 'bold',
+          color: 'white',
+          margin: '0 0 16px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
           ➕ Crear Nueva Quiniela
         </h3>
         
         {/* Basic Info */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '16px',
+          marginBottom: '24px'
+        }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Semana
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: 'rgba(255, 255, 255, 0.9)',
+              marginBottom: '8px'
+            }}>
+              📅 Semana
             </label>
             <input
               type="number"
@@ -143,13 +186,36 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
               onChange={(e) => setWeekNumber(e.target.value)}
               min="1"
               max="53"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'rgba(255, 255, 255, 0.9)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '8px',
+                color: '#374151',
+                outline: 'none',
+                transition: 'all 0.3s ease'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#3b82f6';
+                e.target.style.background = 'white';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+              }}
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Año
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: 'rgba(255, 255, 255, 0.9)',
+              marginBottom: '8px'
+            }}>
+              🗓️ Año
             </label>
             <input
               type="number"
@@ -157,49 +223,145 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
               onChange={(e) => setYear(e.target.value)}
               min="2024"
               max="2030"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'rgba(255, 255, 255, 0.9)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '8px',
+                color: '#374151',
+                outline: 'none',
+                transition: 'all 0.3s ease'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#3b82f6';
+                e.target.style.background = 'white';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+              }}
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Deadline (Fecha límite)
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: 'rgba(255, 255, 255, 0.9)',
+              marginBottom: '8px'
+            }}>
+              ⏰ Fecha Límite
             </label>
             <input
               type="datetime-local"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'rgba(255, 255, 255, 0.9)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '8px',
+                color: '#374151',
+                outline: 'none',
+                transition: 'all 0.3s ease'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#3b82f6';
+                e.target.style.background = 'white';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+              }}
             />
           </div>
         </div>
         
         {/* Title */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Título de la Quiniela
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: 'rgba(255, 255, 255, 0.9)',
+            marginBottom: '8px'
+          }}>
+            🏆 Título de la Quiniela
           </label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: 'rgba(255, 255, 255, 0.9)',
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '8px',
+              color: '#374151',
+              outline: 'none',
+              transition: 'all 0.3s ease'
+            }}
             placeholder="Ej: Semana 30 - 2025"
+            onFocus={(e) => {
+              e.target.style.borderColor = '#3b82f6';
+              e.target.style.background = 'white';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+              e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+            }}
           />
         </div>
       </div>
 
       {/* Match Selection */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h4 className="text-md font-semibold text-gray-800">
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.1)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: '16px',
+        padding: '24px',
+        marginBottom: '24px',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px'
+        }}>
+          <h4 style={{
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: 'white',
+            margin: 0
+          }}>
             ⚽ Seleccionar Partidos ({availableMatches.length} disponibles)
           </h4>
           
-          <div className="flex gap-2">
+          <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={selectAllMatches}
-              className="text-sm bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded-lg transition-colors"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                color: 'white',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+              }}
             >
               {selectedMatches.size === availableMatches.length ? 'Deseleccionar Todo' : 'Seleccionar Todo'}
             </button>
@@ -207,47 +369,128 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
         </div>
 
         {availableMatches.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-4">📦</div>
-            <p className="text-gray-600">No hay partidos disponibles</p>
-            <p className="text-sm text-gray-500">Primero importa partidos en la sección "Gestión de Partidos"</p>
+          <div style={{
+            textAlign: 'center',
+            padding: '64px'
+          }}>
+            <div style={{ fontSize: '64px', marginBottom: '16px', opacity: 0.7 }}>
+              📦
+            </div>
+            <p style={{
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: '16px',
+              margin: '0 0 8px 0'
+            }}>
+              No hay partidos disponibles
+            </p>
+            <p style={{
+              color: 'rgba(255, 255, 255, 0.6)',
+              fontSize: '14px',
+              margin: 0
+            }}>
+              Primero importa partidos en la sección "Gestión de Partidos"
+            </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full table-auto">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '12px',
+              overflow: 'hidden'
+            }}>
               <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                <tr style={{
+                  background: 'rgba(255, 255, 255, 0.1)'
+                }}>
+                  <th style={{
+                    padding: '16px',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: 'rgba(255, 255, 255, 0.9)'
+                  }}>
                     <input
                       type="checkbox"
                       checked={selectedMatches.size === availableMatches.length && availableMatches.length > 0}
                       onChange={selectAllMatches}
-                      className="rounded"
+                      style={{ transform: 'scale(1.2)' }}
                     />
                   </th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Partido</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Liga</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Fecha</th>
+                  <th style={{
+                    padding: '16px',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: 'rgba(255, 255, 255, 0.9)'
+                  }}>Partido</th>
+                  <th style={{
+                    padding: '16px',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: 'rgba(255, 255, 255, 0.9)'
+                  }}>Liga</th>
+                  <th style={{
+                    padding: '16px',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: 'rgba(255, 255, 255, 0.9)'
+                  }}>Fecha</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {availableMatches.map((match) => (
-                  <tr key={match.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2">
+                  <tr key={match.id} style={{
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                    transition: 'all 0.3s ease',
+                    background: selectedMatches.has(match.id) ? 'rgba(59, 130, 246, 0.2)' : 'transparent'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!selectedMatches.has(match.id)) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!selectedMatches.has(match.id)) {
+                      e.currentTarget.style.background = 'transparent';
+                    } else {
+                      e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
+                    }
+                  }}
+                  >
+                    <td style={{ padding: '16px' }}>
                       <input
                         type="checkbox"
                         checked={selectedMatches.has(match.id)}
                         onChange={() => toggleMatchSelection(match.id)}
-                        className="rounded"
+                        style={{ transform: 'scale(1.2)' }}
                       />
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-900">
-                      <div className="font-medium">
+                    <td style={{
+                      padding: '16px',
+                      color: 'white'
+                    }}>
+                      <div style={{
+                        fontWeight: 'bold'
+                      }}>
                         {match.homeTeam} vs {match.awayTeam}
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-900">{match.league}</td>
-                    <td className="px-4 py-2 text-sm text-gray-900">
+                    <td style={{
+                      padding: '16px',
+                      fontSize: '14px',
+                      color: 'white'
+                    }}>
+                      {match.league}
+                    </td>
+                    <td style={{
+                      padding: '16px',
+                      fontSize: '14px',
+                      color: 'white'
+                    }}>
                       {formatMatchDate(match.date)}
                     </td>
                   </tr>
@@ -259,28 +502,126 @@ export default function CreateQuiniela({ onQuinielaCreated }) {
       </div>
 
       {/* Create Button */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex justify-between items-center">
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.1)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: '16px',
+        padding: '24px',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+          justifyContent: 'space-between',
+          alignItems: window.innerWidth < 768 ? 'stretch' : 'center',
+          gap: '16px'
+        }}>
           <div>
-            <p className="text-sm text-gray-600">
+            <h4 style={{
+              fontSize: '18px',
+              fontWeight: 'bold',
+              color: 'white',
+              margin: '0 0 8px 0'
+            }}>
+              Crear Quiniela
+            </h4>
+            <p style={{
+              fontSize: '14px',
+              color: 'rgba(255, 255, 255, 0.8)',
+              margin: '0 0 8px 0'
+            }}>
               {selectedMatches.size} partidos seleccionados
             </p>
             {deadline && (
-              <p className="text-xs text-gray-500">
+              <p style={{
+                fontSize: '12px',
+                color: 'rgba(255, 255, 255, 0.7)',
+                margin: 0
+              }}>
                 Deadline: {new Date(deadline).toLocaleString('es-MX')}
               </p>
             )}
+            
+            {/* Progress indicator */}
+            <div style={{
+              width: '100%',
+              height: '4px',
+              background: 'rgba(255, 255, 255, 0.2)',
+              borderRadius: '2px',
+              marginTop: '8px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                width: `${availableMatches.length > 0 ? (selectedMatches.size / availableMatches.length) * 100 : 0}%`,
+                height: '100%',
+                background: selectedMatches.size > 0 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(255, 255, 255, 0.3)',
+                borderRadius: '2px',
+                transition: 'width 0.3s ease'
+              }}></div>
+            </div>
           </div>
           
           <button
             onClick={handleCreateQuiniela}
             disabled={creating || selectedMatches.size === 0}
-            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: 'white',
+              border: 'none',
+              padding: '16px 32px',
+              borderRadius: '12px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              opacity: (creating || selectedMatches.size === 0) ? 0.5 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              minWidth: '200px',
+              justifyContent: 'center'
+            }}
+            onMouseEnter={(e) => {
+              if (!creating && selectedMatches.size > 0) {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 25px rgba(16, 185, 129, 0.3)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!creating && selectedMatches.size > 0) {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }
+            }}
           >
-            {creating ? '⏳ Creando...' : '🏆 Crear Quiniela'}
+            {creating ? (
+              <>
+                <div style={{
+                  width: '20px',
+                  height: '20px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  borderTop: '2px solid white',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }}></div>
+                Creando...
+              </>
+            ) : (
+              <>
+                🏆 Crear Quiniela
+              </>
+            )}
           </button>
         </div>
       </div>
+
+      {/* CSS for animations */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// src/components/user/UserPayments.jsx
+// src/components/user/UserPayments.jsx - Versión con diseño mejorado
 import React, { useState, useEffect } from 'react';
 import { getUserPayments, markPaymentAsPaid } from '../../services/paymentsService';
 import { getAllUsers } from '../../services/userService';
@@ -61,15 +61,53 @@ export default function UserPayments() {
   const TabButton = ({ tabId, label, isActive, onClick, badge }) => (
     <button
       onClick={() => onClick(tabId)}
-      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors relative ${
-        isActive
-          ? 'bg-blue-500 text-white'
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-      }`}
+      style={{
+        padding: '12px 20px',
+        borderRadius: '12px',
+        border: 'none',
+        fontSize: '14px',
+        fontWeight: '600',
+        cursor: 'pointer',
+        transition: 'all 0.3s ease',
+        position: 'relative',
+        background: isActive 
+          ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+          : 'rgba(255, 255, 255, 0.1)',
+        color: 'white',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      }}
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          e.target.style.background = 'rgba(255, 255, 255, 0.15)';
+          e.target.style.transform = 'translateY(-2px)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+          e.target.style.transform = 'translateY(0)';
+        }
+      }}
     >
       {label}
       {badge > 0 && (
-        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+        <span style={{
+          position: 'absolute',
+          top: '-6px',
+          right: '-6px',
+          background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+          color: 'white',
+          fontSize: '10px',
+          fontWeight: 'bold',
+          borderRadius: '50%',
+          width: '20px',
+          height: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '2px solid rgba(255, 255, 255, 0.3)'
+        }}>
           {badge}
         </span>
       )}
@@ -78,22 +116,58 @@ export default function UserPayments() {
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-        <p className="text-gray-600">Cargando información de pagos...</p>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '64px',
+        textAlign: 'center'
+      }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          border: '4px solid rgba(255, 255, 255, 0.3)',
+          borderTop: '4px solid white',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          marginBottom: '16px'
+        }}></div>
+        <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '16px', margin: 0 }}>
+          Cargando información de pagos...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div style={{ color: 'white' }}>
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.1)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: '16px',
+        padding: '24px',
+        marginBottom: '24px',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      }}>
+        <h2 style={{
+          fontSize: '28px',
+          fontWeight: 'bold',
+          color: 'white',
+          margin: '0 0 16px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
           💰 Mis Pagos
         </h2>
         
-        <div className="flex flex-wrap gap-2">
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '8px'
+        }}>
           <TabButton
             tabId="summary"
             label="📊 Resumen"
@@ -125,74 +199,242 @@ export default function UserPayments() {
 
       {/* Resumen */}
       {activeTab === 'summary' && (
-        <div className="space-y-6">
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '24px',
+          animation: 'fadeIn 0.6s ease-out'
+        }}>
           {/* Tarjetas de Resumen */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">💸 Debo Pagar</h3>
-                <span className="text-2xl">😰</span>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '24px'
+          }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(15px)',
+              borderRadius: '16px',
+              padding: '32px',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              position: 'relative',
+              overflow: 'hidden',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-4px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+            >
+              {/* Background decoration */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                width: '80px',
+                height: '80px',
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%)',
+                borderRadius: '0 16px 0 100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <span style={{ fontSize: '32px', filter: 'brightness(1.2)' }}>😰</span>
               </div>
               
-              <div className="text-center">
-                <div className="text-3xl font-bold text-red-600 mb-2">
-                  ${payments.totalOwed}
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '16px'
+                }}>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: 'white',
+                    margin: 0
+                  }}>
+                    💸 Debo Pagar
+                  </h3>
                 </div>
-                <div className="text-sm text-gray-600">
-                  {payments.paymentsDue.filter(p => p.status === 'pending').length} pagos pendientes
-                </div>
-              </div>
-              
-              {payments.totalOwed > 0 && (
-                <div className="mt-4 p-3 bg-red-50 rounded-lg">
-                  <div className="text-sm text-red-800">
-                    💡 <strong>Tip:</strong> Paga pronto para evitar recordatorios
+                
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    fontSize: '40px',
+                    fontWeight: 'bold',
+                    color: '#ef4444',
+                    margin: '0 0 8px 0',
+                    lineHeight: 1
+                  }}>
+                    ${payments.totalOwed}
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    margin: '0 0 16px 0'
+                  }}>
+                    {payments.paymentsDue.filter(p => p.status === 'pending').length} pagos pendientes
                   </div>
                 </div>
-              )}
+                
+                {payments.totalOwed > 0 && (
+                  <div style={{
+                    padding: '12px',
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(239, 68, 68, 0.4)'
+                  }}>
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#fca5a5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      💡 <strong>Tip:</strong> Paga pronto para evitar recordatorios
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">💰 Me Deben</h3>
-                <span className="text-2xl">😊</span>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(15px)',
+              borderRadius: '16px',
+              padding: '32px',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              position: 'relative',
+              overflow: 'hidden',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-4px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+            >
+              {/* Background decoration */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                width: '80px',
+                height: '80px',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.2) 100%)',
+                borderRadius: '0 16px 0 100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <span style={{ fontSize: '32px', filter: 'brightness(1.2)' }}>😊</span>
               </div>
               
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600 mb-2">
-                  ${payments.totalToReceive}
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '16px'
+                }}>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: 'white',
+                    margin: 0
+                  }}>
+                    💰 Me Deben
+                  </h3>
                 </div>
-                <div className="text-sm text-gray-600">
-                  {payments.paymentsToReceive.filter(p => p.status === 'pending').length} pagos esperando
-                </div>
-              </div>
-              
-              {payments.totalToReceive > 0 && (
-                <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                  <div className="text-sm text-green-800">
-                    🎉 <strong>¡Genial!</strong> Tienes dinero por cobrar
+                
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    fontSize: '40px',
+                    fontWeight: 'bold',
+                    color: '#10b981',
+                    margin: '0 0 8px 0',
+                    lineHeight: 1
+                  }}>
+                    ${payments.totalToReceive}
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    margin: '0 0 16px 0'
+                  }}>
+                    {payments.paymentsToReceive.filter(p => p.status === 'pending').length} pagos esperando
                   </div>
                 </div>
-              )}
+                
+                {payments.totalToReceive > 0 && (
+                  <div style={{
+                    padding: '12px',
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(16, 185, 129, 0.4)'
+                  }}>
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#6ee7b7',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      🎉 <strong>¡Genial!</strong> Tienes dinero por cobrar
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Balance General */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(15px)',
+            borderRadius: '16px',
+            padding: '32px',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            textAlign: 'center'
+          }}>
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: 'bold',
+              color: 'white',
+              margin: '0 0 24px 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}>
               ⚖️ Balance General
             </h3>
             
-            <div className="text-center">
-              <div className={`text-4xl font-bold mb-2 ${
-                payments.totalToReceive - payments.totalOwed >= 0 
-                  ? 'text-green-600' 
-                  : 'text-red-600'
-              }`}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                fontSize: '48px',
+                fontWeight: 'bold',
+                margin: '0 0 8px 0',
+                color: payments.totalToReceive - payments.totalOwed >= 0 
+                  ? '#10b981' 
+                  : '#ef4444'
+              }}>
                 ${payments.totalToReceive - payments.totalOwed >= 0 ? '+' : ''}
                 {payments.totalToReceive - payments.totalOwed}
               </div>
-              <div className="text-sm text-gray-600">
+              <div style={{
+                fontSize: '16px',
+                color: 'rgba(255, 255, 255, 0.8)',
+                margin: 0
+              }}>
                 {payments.totalToReceive - payments.totalOwed >= 0 
                   ? '🎉 Estás en positivo' 
                   : '😅 Estás en negativo'
@@ -203,29 +445,98 @@ export default function UserPayments() {
 
           {/* Acciones Rápidas */}
           {(payments.totalOwed > 0 || payments.totalToReceive > 0) && (
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '16px',
+              padding: '24px',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>
+              <h3 style={{
+                fontSize: '18px',
+                fontWeight: 'bold',
+                color: 'white',
+                margin: '0 0 16px 0'
+              }}>
                 ⚡ Acciones Rápidas
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '16px'
+              }}>
                 {payments.totalOwed > 0 && (
                   <button
                     onClick={() => setActiveTab('owed')}
-                    className="bg-red-100 hover:bg-red-200 text-red-700 p-4 rounded-lg text-left transition-colors"
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.2)',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = 'rgba(239, 68, 68, 0.3)';
+                      e.target.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+                      e.target.style.transform = 'translateY(0)';
+                    }}
                   >
-                    <div className="font-medium">💸 Ver Pagos Pendientes</div>
-                    <div className="text-sm">Revisa qué debes pagar</div>
+                    <div style={{
+                      fontWeight: 'bold',
+                      marginBottom: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      💸 Ver Pagos Pendientes
+                    </div>
+                    <div style={{ fontSize: '14px', opacity: 0.8 }}>
+                      Revisa qué debes pagar
+                    </div>
                   </button>
                 )}
                 
                 {payments.totalToReceive > 0 && (
                   <button
                     onClick={() => setActiveTab('receiving')}
-                    className="bg-green-100 hover:bg-green-200 text-green-700 p-4 rounded-lg text-left transition-colors"
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.2)',
+                      border: '1px solid rgba(16, 185, 129, 0.4)',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = 'rgba(16, 185, 129, 0.3)';
+                      e.target.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = 'rgba(16, 185, 129, 0.2)';
+                      e.target.style.transform = 'translateY(0)';
+                    }}
                   >
-                    <div className="font-medium">💰 Ver Dinero por Cobrar</div>
-                    <div className="text-sm">Revisa quién te debe</div>
+                    <div style={{
+                      fontWeight: 'bold',
+                      marginBottom: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      💰 Ver Dinero por Cobrar
+                    </div>
+                    <div style={{ fontSize: '14px', opacity: 0.8 }}>
+                      Revisa quién te debe
+                    </div>
                   </button>
                 )}
               </div>
@@ -236,9 +547,21 @@ export default function UserPayments() {
 
       {/* Pagos que Debo */}
       {activeTab === 'owed' && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            💸 Pagos Pendientes
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '16px',
+          padding: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          animation: 'fadeIn 0.6s ease-out'
+        }}>
+          <h3 style={{
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: 'white',
+            margin: '0 0 16px 0'
+          }}>
+            💸 Pagos Pendientes ({payments.paymentsDue.filter(p => p.status === 'pending').length})
           </h3>
           
           <PaymentsList 
@@ -252,9 +575,21 @@ export default function UserPayments() {
 
       {/* Pagos que Me Deben */}
       {activeTab === 'receiving' && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            💰 Dinero por Cobrar
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '16px',
+          padding: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          animation: 'fadeIn 0.6s ease-out'
+        }}>
+          <h3 style={{
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: 'white',
+            margin: '0 0 16px 0'
+          }}>
+            💰 Dinero por Cobrar ({payments.paymentsToReceive.filter(p => p.status === 'pending').length})
           </h3>
           
           <PaymentsList 
@@ -267,14 +602,32 @@ export default function UserPayments() {
 
       {/* Historial */}
       {activeTab === 'history' && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '16px',
+          padding: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          animation: 'fadeIn 0.6s ease-out'
+        }}>
+          <h3 style={{
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: 'white',
+            margin: '0 0 16px 0'
+          }}>
             📚 Historial de Pagos
           </h3>
           
-          <div className="space-y-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <h4 className="font-medium text-gray-700 mb-2">✅ Pagos Completados</h4>
+              <h4 style={{
+                fontWeight: 'bold',
+                color: 'rgba(255, 255, 255, 0.9)',
+                margin: '0 0 12px 0'
+              }}>
+                ✅ Pagos Completados
+              </h4>
               <PaymentsList 
                 payments={[...payments.paymentsDue, ...payments.paymentsToReceive].filter(p => p.status === 'paid')}
                 getUserName={getUserName}
@@ -284,6 +637,19 @@ export default function UserPayments() {
           </div>
         </div>
       )}
+
+      {/* CSS for animations */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -300,9 +666,20 @@ function PaymentsList({ payments, getUserName, type, onConfirmPayment }) {
     const message = emptyMessages[type] || { icon: '💰', text: 'No hay pagos' };
     
     return (
-      <div className="text-center py-8">
-        <div className="text-4xl mb-4">{message.icon}</div>
-        <p className="text-gray-600">{message.text}</p>
+      <div style={{
+        textAlign: 'center',
+        padding: '64px'
+      }}>
+        <div style={{ fontSize: '64px', marginBottom: '16px', opacity: 0.7 }}>
+          {message.icon}
+        </div>
+        <p style={{
+          color: 'rgba(255, 255, 255, 0.8)',
+          fontSize: '16px',
+          margin: 0
+        }}>
+          {message.text}
+        </p>
       </div>
     );
   }
@@ -319,7 +696,7 @@ function PaymentsList({ payments, getUserName, type, onConfirmPayment }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {payments.map((payment) => {
         const isOverdue = payment.status === 'pending' && 
           new Date(payment.dueDate?.toDate ? payment.dueDate.toDate() : payment.dueDate) < new Date();
@@ -327,37 +704,93 @@ function PaymentsList({ payments, getUserName, type, onConfirmPayment }) {
         return (
           <div 
             key={payment.id} 
-            className={`border rounded-lg p-4 ${
-              isOverdue ? 'border-red-200 bg-red-50' : 
-              type === 'receiving' ? 'border-green-200 bg-green-50' :
-              'border-gray-200'
-            }`}
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '12px',
+              padding: '20px',
+              border: isOverdue 
+                ? '1px solid rgba(239, 68, 68, 0.4)'
+                : type === 'receiving' 
+                ? '1px solid rgba(16, 185, 129, 0.4)'
+                : '1px solid rgba(255, 255, 255, 0.2)',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
           >
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-medium text-gray-900">
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'start'
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '12px'
+                }}>
+                  <span style={{
+                    fontWeight: 'bold',
+                    color: 'white',
+                    fontSize: '16px'
+                  }}>
                     {type === 'owed' 
                       ? `Pagas a ${getUserName(payment.toUser)}`
                       : `${getUserName(payment.fromUser)} te paga`
                     }
                   </span>
-                  <span className="text-xl font-bold text-green-600">
+                  <span style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    color: '#10b981'
+                  }}>
                     ${payment.amount}
                   </span>
                   {isOverdue && (
-                    <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
+                    <span style={{
+                      background: 'rgba(239, 68, 68, 0.2)',
+                      color: '#fca5a5',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(239, 68, 68, 0.4)'
+                    }}>
                       ⚠️ Vencido
                     </span>
                   )}
                 </div>
                 
-                <div className="text-sm text-gray-600 space-y-1">
-                  <div>📋 {payment.reason}</div>
-                  <div>📅 {new Date(payment.dueDate?.toDate ? payment.dueDate.toDate() : payment.dueDate).toLocaleDateString()}</div>
-                  {payment.notes && <div>📝 {payment.notes}</div>}
+                <div style={{
+                  fontSize: '14px',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    📋 {payment.reason}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    📅 {new Date(payment.dueDate?.toDate ? payment.dueDate.toDate() : payment.dueDate).toLocaleDateString()}
+                  </div>
+                  {payment.notes && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      📝 {payment.notes}
+                    </div>
+                  )}
                   {payment.paidAt && (
-                    <div>✅ Pagado: {payment.paidAt.toDate().toLocaleDateString()}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981' }}>
+                      ✅ Pagado: {payment.paidAt.toDate().toLocaleDateString()}
+                    </div>
                   )}
                 </div>
               </div>
@@ -365,7 +798,28 @@ function PaymentsList({ payments, getUserName, type, onConfirmPayment }) {
               {type === 'owed' && payment.status === 'pending' && (
                 <button
                   onClick={() => handleQuickPay(payment)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-1px)';
+                    e.target.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = 'none';
+                  }}
                 >
                   💳 Ya Pagué
                 </button>

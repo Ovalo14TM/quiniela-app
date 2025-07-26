@@ -1,4 +1,4 @@
-// src/components/user/PredictionsForm.jsx
+// src/components/user/PredictionsForm.jsx - Versión con diseño mejorado
 import React, { useState, useEffect } from 'react';
 import { getCurrentQuiniela, isQuinielaOpen, getTimeUntilDeadline } from '../../services/quinielaService';
 import { getMatchesByWeek } from '../../services/matchesService';
@@ -145,25 +145,56 @@ export default function PredictionsForm() {
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-        <p className="text-gray-600">Cargando quiniela...</p>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '64px',
+        textAlign: 'center'
+      }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          border: '4px solid rgba(255, 255, 255, 0.3)',
+          borderTop: '4px solid white',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          marginBottom: '16px'
+        }}></div>
+        <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '16px', margin: 0 }}>
+          Cargando quiniela...
+        </p>
       </div>
     );
   }
 
   if (!currentQuiniela) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="text-center py-8">
-          <div className="text-6xl mb-4">📋</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">
-            No hay quiniela activa
-          </h3>
-          <p className="text-gray-600">
-            El administrador aún no ha creado la quiniela de esta semana
-          </p>
-        </div>
+      <div style={{
+        textAlign: 'center',
+        padding: '64px 32px'
+      }}>
+        <div style={{
+          fontSize: '80px',
+          marginBottom: '24px',
+          opacity: 0.7
+        }}>📋</div>
+        <h3 style={{
+          fontSize: '24px',
+          fontWeight: 'bold',
+          color: 'white',
+          margin: '0 0 12px 0'
+        }}>
+          No hay quiniela activa
+        </h3>
+        <p style={{
+          color: 'rgba(255, 255, 255, 0.7)',
+          fontSize: '16px',
+          margin: 0
+        }}>
+          El administrador aún no ha creado la quiniela de esta semana
+        </p>
       </div>
     );
   }
@@ -173,33 +204,114 @@ export default function PredictionsForm() {
   const totalPredictions = matches.length;
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header de la Quiniela */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.1)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: '16px',
+        padding: '24px',
+        marginBottom: '24px',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+          justifyContent: 'space-between',
+          alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+          gap: '16px'
+        }}>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <h2 style={{
+              fontSize: '28px',
+              fontWeight: 'bold',
+              color: 'white',
+              margin: '0 0 12px 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
               🏆 {currentQuiniela.title}
             </h2>
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span>📅 {matches.length} partidos</span>
-              <span>✅ {completedPredictions}/{totalPredictions} completadas</span>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '24px',
+              fontSize: '14px',
+              color: 'rgba(255, 255, 255, 0.8)'
+            }}>
+              <span style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                padding: '6px 12px',
+                borderRadius: '8px'
+              }}>
+                📅 {matches.length} partidos
+              </span>
+              <span style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: completedPredictions === totalPredictions 
+                  ? 'rgba(16, 185, 129, 0.2)' 
+                  : 'rgba(245, 158, 11, 0.2)',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${completedPredictions === totalPredictions 
+                  ? 'rgba(16, 185, 129, 0.4)' 
+                  : 'rgba(245, 158, 11, 0.4)'}`
+              }}>
+                ✅ {completedPredictions}/{totalPredictions} completadas
+              </span>
             </div>
           </div>
           
-          <div className="text-right">
-            <div className={`text-lg font-semibold ${timeLeft?.expired ? 'text-red-600' : 'text-green-600'}`}>
+          <div style={{
+            textAlign: 'right',
+            background: 'rgba(255, 255, 255, 0.1)',
+            padding: '16px',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }}>
+            <div style={{
+              fontSize: '20px',
+              fontWeight: 'bold',
+              color: timeLeft?.expired ? '#ef4444' : '#10b981',
+              margin: '0 0 4px 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
               ⏰ {timeLeft?.text || 'Calculando...'}
             </div>
-            <div className="text-sm text-gray-600">
+            <div style={{
+              fontSize: '12px',
+              color: 'rgba(255, 255, 255, 0.7)',
+              margin: 0
+            }}>
               {isOpen ? 'Tiempo restante' : 'Quiniela cerrada'}
             </div>
           </div>
         </div>
         
         {!isOpen && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800 text-sm">
+          <div style={{
+            marginTop: '16px',
+            padding: '16px',
+            background: 'rgba(239, 68, 68, 0.2)',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            borderRadius: '12px'
+          }}>
+            <p style={{
+              color: '#fca5a5',
+              fontSize: '14px',
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
               ⚠️ Esta quiniela está cerrada. Ya no puedes modificar tus predicciones.
             </p>
           </div>
@@ -207,37 +319,106 @@ export default function PredictionsForm() {
       </div>
 
       {/* Lista de Partidos */}
-      <div className="space-y-4">
+      <div style={{ marginBottom: '24px' }}>
         {matches.map((match, index) => {
           const matchPrediction = predictions[match.id] || {};
           const hasValidPrediction = matchPrediction.homeScore !== undefined && matchPrediction.awayScore !== undefined;
           
           return (
-            <div key={match.id} className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+            <div key={match.id} style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '16px',
+              padding: '24px',
+              marginBottom: '16px',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+            >
+              <div style={{
+                display: 'flex',
+                flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+                justifyContent: 'space-between',
+                alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+                gap: '20px'
+              }}>
                 {/* Info del Partido */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginBottom: '12px'
+                  }}>
+                    <span style={{
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      color: 'white',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      padding: '4px 8px',
+                      borderRadius: '6px'
+                    }}>
                       #{index + 1}
                     </span>
-                    <span className="text-sm text-gray-500">{match.league}</span>
+                    <span style={{
+                      fontSize: '12px',
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      padding: '4px 8px',
+                      borderRadius: '6px'
+                    }}>
+                      {match.league}
+                    </span>
                   </div>
                   
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: 'white',
+                    margin: '0 0 8px 0'
+                  }}>
                     {match.homeTeam} vs {match.awayTeam}
                   </h3>
                   
-                  <p className="text-sm text-gray-600">
+                  <p style={{
+                    fontSize: '14px',
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    margin: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
                     📅 {formatMatchDate(match.date)}
                   </p>
                 </div>
 
                 {/* Formulario de Predicción */}
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="text-center">
-                      <div className="text-sm font-medium text-gray-700 mb-1">
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '20px'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        marginBottom: '8px'
+                      }}>
                         {match.homeTeam.split(' ').slice(-1)[0]}
                       </div>
                       <input
@@ -247,15 +428,46 @@ export default function PredictionsForm() {
                         value={matchPrediction.homeScore || ''}
                         onChange={(e) => handlePredictionChange(match.id, 'homeScore', parseInt(e.target.value) || '')}
                         disabled={!isOpen}
-                        className="w-16 h-12 text-center text-lg font-bold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        style={{
+                          width: '64px',
+                          height: '48px',
+                          textAlign: 'center',
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          background: 'rgba(255, 255, 255, 0.9)',
+                          border: '2px solid rgba(255, 255, 255, 0.3)',
+                          borderRadius: '12px',
+                          color: '#374151',
+                          outline: 'none',
+                          transition: 'all 0.3s ease'
+                        }}
                         placeholder="0"
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#3b82f6';
+                          e.target.style.background = 'white';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                          e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+                        }}
                       />
                     </div>
                     
-                    <div className="text-2xl font-bold text-gray-400">-</div>
+                    <div style={{
+                      fontSize: '24px',
+                      fontWeight: 'bold',
+                      color: 'rgba(255, 255, 255, 0.5)'
+                    }}>
+                      -
+                    </div>
                     
-                    <div className="text-center">
-                      <div className="text-sm font-medium text-gray-700 mb-1">
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        marginBottom: '8px'
+                      }}>
                         {match.awayTeam.split(' ').slice(-1)[0]}
                       </div>
                       <input
@@ -265,20 +477,62 @@ export default function PredictionsForm() {
                         value={matchPrediction.awayScore || ''}
                         onChange={(e) => handlePredictionChange(match.id, 'awayScore', parseInt(e.target.value) || '')}
                         disabled={!isOpen}
-                        className="w-16 h-12 text-center text-lg font-bold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        style={{
+                          width: '64px',
+                          height: '48px',
+                          textAlign: 'center',
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          background: 'rgba(255, 255, 255, 0.9)',
+                          border: '2px solid rgba(255, 255, 255, 0.3)',
+                          borderRadius: '12px',
+                          color: '#374151',
+                          outline: 'none',
+                          transition: 'all 0.3s ease'
+                        }}
                         placeholder="0"
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#3b82f6';
+                          e.target.style.background = 'white';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                          e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+                        }}
                       />
                     </div>
                   </div>
 
                   {/* Estado de la Predicción */}
-                  <div className="flex flex-col items-center gap-2">
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
                     {hasValidPrediction ? (
-                      <span className="text-green-600 text-sm font-medium">
+                      <span style={{
+                        color: '#10b981',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: 'rgba(16, 185, 129, 0.2)',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(16, 185, 129, 0.4)'
+                      }}>
                         ✅ Guardada
                       </span>
                     ) : (
-                      <span className="text-gray-400 text-sm">
+                      <span style={{
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
                         ⏳ Pendiente
                       </span>
                     )}
@@ -287,7 +541,27 @@ export default function PredictionsForm() {
                       <button
                         onClick={() => savePredictionForMatch(match.id)}
                         disabled={saving || !predictions[match.id]?.homeScore === undefined}
-                        className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors disabled:opacity-50"
+                        style={{
+                          fontSize: '12px',
+                          background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          opacity: saving ? 0.5 : 1
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!saving) {
+                            e.target.style.transform = 'translateY(-1px)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!saving) {
+                            e.target.style.transform = 'translateY(0)';
+                          }
+                        }}
                       >
                         💾 Guardar
                       </button>
@@ -302,27 +576,119 @@ export default function PredictionsForm() {
 
       {/* Botón para Guardar Todo */}
       {isOpen && matches.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '16px',
+          padding: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.2)'
+        }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+            justifyContent: 'space-between',
+            alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+            gap: '16px'
+          }}>
             <div>
-              <h3 className="font-semibold text-gray-900">
+              <h3 style={{
+                fontSize: '18px',
+                fontWeight: 'bold',
+                color: 'white',
+                margin: '0 0 8px 0'
+              }}>
                 Guardar Todas las Predicciones
               </h3>
-              <p className="text-sm text-gray-600">
+              <p style={{
+                fontSize: '14px',
+                color: 'rgba(255, 255, 255, 0.7)',
+                margin: 0
+              }}>
                 {completedPredictions}/{totalPredictions} predicciones completadas
               </p>
+              
+              {/* Progress bar */}
+              <div style={{
+                width: '100%',
+                height: '6px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                borderRadius: '3px',
+                marginTop: '8px',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  width: `${totalPredictions > 0 ? (completedPredictions / totalPredictions) * 100 : 0}%`,
+                  height: '100%',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  borderRadius: '3px',
+                  transition: 'width 0.3s ease'
+                }}>
+                </div>
+              </div>
             </div>
             
             <button
               onClick={saveAllPredictions}
               disabled={saving}
-              className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                border: 'none',
+                padding: '16px 24px',
+                borderRadius: '12px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                opacity: saving ? 0.5 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                minWidth: '200px',
+                justifyContent: 'center'
+              }}
+              onMouseEnter={(e) => {
+                if (!saving) {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 8px 25px rgba(16, 185, 129, 0.3)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!saving) {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                }
+              }}
             >
-              {saving ? '⏳ Guardando...' : '💾 Guardar Todo'}
+              {saving ? (
+                <>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderTop: '2px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  💾 Guardar Todo
+                </>
+              )}
             </button>
           </div>
         </div>
       )}
+
+      {/* CSS for animations */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
