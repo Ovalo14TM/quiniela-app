@@ -1,6 +1,7 @@
 // src/components/admin/AdminPanel.jsx - Versión con diseño mejorado
 import React, { useState, useEffect } from 'react';
 import { getAllUsers } from '../../services/userService';
+import AdminPredictionsViewer from './AdminPredictionsViewer';  // ← NUEVA LÍNEA
 import MatchesManagement from './MatchesManagement';
 import CreateQuiniela from './CreateQuiniela';
 import ResultsManagement from './ResultsManagement';
@@ -223,6 +224,13 @@ export default function AdminPanel() {
             label="Resultados"
             icon="📋"
             isActive={activeTab === 'results'}
+            onClick={setActiveTab}
+          />
+          <TabButton               // ← PEGAR AQUÍ
+            tabId="predictions"
+            label="Predicciones"
+            icon="👀"
+            isActive={activeTab === 'predictions'}
             onClick={setActiveTab}
           />
           <TabButton
@@ -660,6 +668,14 @@ export default function AdminPanel() {
           <CreateQuiniela onQuinielaCreated={() => console.log('Quiniela created!')} />
         </div>
       )}
+
+{activeTab === 'predictions' && (
+  <div style={{
+    animation: 'fadeIn 0.6s ease-out'
+  }}>
+    <AdminPredictionsViewer />
+  </div>
+)}
 
       {activeTab === 'payments' && (
         <div style={{
