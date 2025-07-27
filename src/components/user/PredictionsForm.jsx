@@ -364,68 +364,108 @@ export default function PredictionsForm() {
           </div>
         </div>
 
-        {/* Información del Primer Partido */}
-        {firstMatchInfo && (
+ {firstMatchInfo && (
+  <div style={{
+    background: firstMatchInfo.startsIn.expired 
+      ? 'rgba(239, 68, 68, 0.2)' 
+      : 'rgba(59, 130, 246, 0.2)',
+    border: `1px solid ${firstMatchInfo.startsIn.expired 
+      ? 'rgba(239, 68, 68, 0.4)' 
+      : 'rgba(59, 130, 246, 0.4)'}`,
+    borderRadius: '12px',
+    padding: '16px',
+    marginBottom: '16px'
+  }}>
+    <h4 style={{
+      fontSize: '16px',
+      fontWeight: 'bold',
+      color: firstMatchInfo.startsIn.expired ? '#fca5a5' : '#93c5fd',
+      margin: '0 0 8px 0',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    }}>
+      🥇 Primer Partido {firstMatchInfo.startsIn.expired ? '(Ya comenzó)' : firstMatchInfo.startsIn.text}
+    </h4>
+    <div style={{
+      display: 'flex',
+      flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+      justifyContent: 'space-between',
+      alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+      gap: '12px'
+    }}>
+      <div>
+        <div style={{
+          fontWeight: 'bold',
+          color: 'white',
+          fontSize: '16px',
+          marginBottom: '4px'
+        }}>
+          {firstMatchInfo.match.homeTeam} vs {firstMatchInfo.match.awayTeam}
+        </div>
+        <div style={{
+          color: 'rgba(255, 255, 255, 0.8)',
+          fontSize: '14px'
+        }}>
+          {firstMatchInfo.match.league} • {firstMatchInfo.match.date.toLocaleString('es-MX')}
+        </div>
+      </div>
+      
+      {/* ✅ SECCIÓN CORREGIDA DEL DEADLINE */}
+      {!firstMatchInfo.startsIn.expired && (
+        <div style={{
+          background: 'rgba(245, 158, 11, 0.3)',
+          border: '1px solid rgba(245, 158, 11, 0.5)',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          textAlign: 'center',
+          minWidth: '160px'
+        }}>
           <div style={{
-            background: firstMatchInfo.startsIn.expired 
-              ? 'rgba(239, 68, 68, 0.2)' 
-              : 'rgba(59, 130, 246, 0.2)',
-            border: `1px solid ${firstMatchInfo.startsIn.expired 
-              ? 'rgba(239, 68, 68, 0.4)' 
-              : 'rgba(59, 130, 246, 0.4)'}`,
-            borderRadius: '12px',
-            padding: '16px',
-            marginBottom: '16px'
+            fontSize: '12px',
+            color: '#fbbf24',
+            fontWeight: '600',
+            marginBottom: '4px'
           }}>
-            <h4 style={{
-              fontSize: '16px',
-              fontWeight: 'bold',
-              color: firstMatchInfo.startsIn.expired ? '#fca5a5' : '#93c5fd',
-              margin: '0 0 8px 0',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              🥇 Primer Partido {firstMatchInfo.startsIn.expired ? '(Ya comenzó)' : firstMatchInfo.startsIn.text}
-            </h4>
-            <div style={{
-              display: 'flex',
-              flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-              justifyContent: 'space-between',
-              alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
-              gap: '12px'
-            }}>
-              <div>
-                <div style={{
-                  fontWeight: 'bold',
-                  color: 'white',
-                  fontSize: '16px',
-                  marginBottom: '4px'
-                }}>
-                  {firstMatchInfo.match.homeTeam} vs {firstMatchInfo.match.awayTeam}
-                </div>
-                <div style={{
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '14px'
-                }}>
-                  {firstMatchInfo.match.league} • {firstMatchInfo.match.date.toLocaleString('es-MX')}
-                </div>
-              </div>
-              {!firstMatchInfo.startsIn.expired && (
-                <div style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  color: 'white'
-                }}>
-                  ⚠️ Deadline: 30 min antes
-                </div>
-              )}
-            </div>
+            🔒 PREDICCIONES CIERRAN
           </div>
-        )}
+          <div style={{
+            fontSize: '14px',
+            fontWeight: 'bold',
+            color: '#fcd34d'
+          }}>
+            {(() => {
+              // Calcular cuándo cierran las predicciones (30 min antes del primer partido)
+              const deadlineTime = new Date(firstMatchInfo.match.date.getTime() - (30 * 60 * 1000));
+              const now = new Date();
+              const timeDiff = deadlineTime.getTime() - now.getTime();
+              
+              if (timeDiff <= 0) {
+                return '¡YA CERRADO!';
+              }
+              
+              const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+              const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+              
+              if (hours > 0) {
+                return `En ${hours}h ${minutes}m`;
+              } else {
+                return `En ${minutes}m`;
+              }
+            })()}
+          </div>
+          <div style={{
+            fontSize: '11px',
+            color: 'rgba(252, 211, 77, 0.8)',
+            marginTop: '2px'
+          }}>
+            30 min antes del partido
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+)}
         
         {!isOpen && (
           <div style={{
@@ -579,19 +619,6 @@ export default function PredictionsForm() {
                     }}>
                       {match.league}
                     </span>
-                    {isFirstMatch && (
-                      <span style={{
-                        background: 'rgba(245, 158, 11, 0.2)',
-                        color: '#fbbf24',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        border: '1px solid rgba(245, 158, 11, 0.4)'
-                      }}>
-                        ⚠️ Define deadline
-                      </span>
-                    )}
                   </div>
                   
                   <h3 style={{
