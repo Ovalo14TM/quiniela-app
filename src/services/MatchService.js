@@ -1,5 +1,4 @@
-// src/services/matchService.js - Funciones auxiliares adicionales
-
+// src/services/matchService.js - VERSIÓN CORREGIDA
 import { 
   collection, 
   doc, 
@@ -71,15 +70,25 @@ export const getMatchesByLeague = async (league) => {
   }
 };
 
-// Actualizar resultado de partido y recalcular puntos
+// ✅ FUNCIÓN CORREGIDA: Actualizar resultado de partido y recalcular puntos
 export const updateMatchResult = async (matchId, homeScore, awayScore) => {
   try {
+    // 🔧 CORRECCIÓN: Convertir a números y validar
+    const finalHomeScore = parseInt(homeScore);
+    const finalAwayScore = parseInt(awayScore);
+    
+    if (isNaN(finalHomeScore) || isNaN(finalAwayScore) || finalHomeScore < 0 || finalAwayScore < 0) {
+      throw new Error('Marcadores inválidos');
+    }
+    
+    console.log(`🎯 Actualizando partido ${matchId}: ${finalHomeScore}-${finalAwayScore}`);
+    
     const matchRef = doc(db, 'matches', matchId);
     
     // 1. Actualizar el partido
     await updateDoc(matchRef, {
-      homeScore: parseInt(homeScore),
-      awayScore: parseInt(awayScore),
+      homeScore: finalHomeScore,
+      awayScore: finalAwayScore,
       status: 'FINISHED',
       updatedAt: serverTimestamp(),
       resultUpdatedAt: serverTimestamp()
@@ -101,11 +110,11 @@ export const updateMatchResult = async (matchId, homeScore, awayScore) => {
       try {
         const prediction = predictionDoc.data();
         
-        // Calcular nuevos puntos
+        // 🔧 CORRECCIÓN: Usar los números ya convertidos
         const points = calculatePredictionPoints(
           prediction, 
-          parseInt(homeScore), 
-          parseInt(awayScore)
+          finalHomeScore, 
+          finalAwayScore
         );
 
         // Actualizar predicción con nuevos puntos
@@ -121,6 +130,8 @@ export const updateMatchResult = async (matchId, homeScore, awayScore) => {
         // 4. Actualizar puntos totales del usuario
         await updateUserPredictionPoints(prediction.userId, prediction.quinielaId);
         
+        console.log(`👤 Usuario ${prediction.userId}: ${points} puntos (${prediction.homeScore}-${prediction.awayScore} vs ${finalHomeScore}-${finalAwayScore})`);
+        
       } catch (error) {
         console.error(`Error updating prediction ${predictionDoc.id}:`, error);
       }
@@ -132,7 +143,7 @@ export const updateMatchResult = async (matchId, homeScore, awayScore) => {
       success: true,
       predictionsUpdated,
       usersAffected: usersAffected.size,
-      message: 'Resultado actualizado y puntos recalculados'
+      message: `Resultado ${finalHomeScore}-${finalAwayScore} actualizado y puntos recalculados`
     };
 
   } catch (error) {
@@ -196,7 +207,7 @@ export const getFinishedMatches = async () => {
   }
 };
 
-// Revertir resultado de partido (para correcciones)
+// ✅ FUNCIÓN CORREGIDA: Revertir resultado de partido (para correcciones)
 export const revertMatchResult = async (matchId) => {
   try {
     const matchRef = doc(db, 'matches', matchId);
@@ -299,52 +310,13 @@ export const getMatchStats = async (matchId) => {
     return {
       match: { id: matchSnap.id, ...matchData },
       totalPredictions: predictions.length,
-      averagePoints: predictions.length > 0 ? totalPoints / predictions.length : 0,
+      averagePoints: predictions.length > 0 ? (totalPoints / predictions.length).toFixed(2) : 0,
       perfectPredictions,
-      totalPoints,
       predictions
     };
 
   } catch (error) {
     console.error('Error getting match stats:', error);
     return null;
-  }
-};
-
-// Función para generar resultados de prueba aleatorios
-export const generateRandomResultsForMatches = async (matchIds) => {
-  try {
-    const results = [];
-    
-    for (const matchId of matchIds) {
-      const homeScore = Math.floor(Math.random() * 4); // 0-3 goles
-      const awayScore = Math.floor(Math.random() * 4);   // 0-3 goles
-      
-      try {
-        const result = await updateMatchResult(matchId, homeScore, awayScore);
-        results.push({
-          matchId,
-          homeScore,
-          awayScore,
-          success: true,
-          ...result
-        });
-      } catch (error) {
-        results.push({
-          matchId,
-          success: false,
-          error: error.message
-        });
-      }
-      
-      // Pausa pequeña para no sobrecargar
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-    
-    return results;
-    
-  } catch (error) {
-    console.error('Error generating random results:', error);
-    throw error;
   }
 };

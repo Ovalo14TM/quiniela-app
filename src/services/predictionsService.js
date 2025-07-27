@@ -1,4 +1,4 @@
-// src/services/predictionsService.js - VERSIÓN CORREGIDA
+// src/services/predictionsService.js - VERSIÓN COMPLETA CORREGIDA
 import { 
   collection, 
   doc, 
@@ -105,35 +105,38 @@ export const getPredictionsForMatch = async (matchId) => {
   }
 };
 
-// Calcular puntos de una predicción - FUNCIÓN CORREGIDA
+// ✅ FUNCIÓN CORREGIDA: Calcular puntos de una predicción
 export const calculatePredictionPoints = (prediction, actualHomeScore, actualAwayScore) => {
-  // CORRECCIÓN: Convertir todo a números para comparaciones correctas
+  // 🔧 CORRECCIÓN: Convertir TODOS los valores a números para evitar problemas de tipos
   const predHomeScore = parseInt(prediction.homeScore);
   const predAwayScore = parseInt(prediction.awayScore);
-  const actualHome = parseInt(actualHomeScore);
-  const actualAway = parseInt(actualAwayScore);
+  const actHomeScore = parseInt(actualHomeScore);
+  const actAwayScore = parseInt(actualAwayScore);
   
-  // Validar que todos los valores sean números válidos
-  if (isNaN(predHomeScore) || isNaN(predAwayScore) || isNaN(actualHome) || isNaN(actualAway)) {
-    console.log('⚠️ Valores inválidos para calcular puntos:', {
-      prediction: `${predHomeScore}-${predAwayScore}`,
-      actual: `${actualHome}-${actualAway}`
+  // Verificar que todos los valores sean números válidos
+  if (isNaN(predHomeScore) || isNaN(predAwayScore) || isNaN(actHomeScore) || isNaN(actAwayScore)) {
+    console.error('Valores inválidos en calculatePredictionPoints:', {
+      prediction: prediction,
+      actualHomeScore,
+      actualAwayScore
     });
     return 0;
   }
   
+  console.log(`🔍 Calculando puntos: Predicción ${predHomeScore}-${predAwayScore} vs Resultado ${actHomeScore}-${actAwayScore}`);
+  
   // Resultado exacto: 5 puntos
-  if (predHomeScore === actualHome && predAwayScore === actualAway) {
-    console.log(`🎯 Resultado exacto! ${predHomeScore}-${predAwayScore}`);
+  if (predHomeScore === actHomeScore && predAwayScore === actAwayScore) {
+    console.log('✅ Resultado exacto: 5 puntos');
     return 5;
   }
   
-  // Determinar ganador real y predicho
+  // Determinar ganador real
   let actualResult, predResult;
   
-  if (actualHome > actualAway) {
+  if (actHomeScore > actAwayScore) {
     actualResult = 'home';
-  } else if (actualHome < actualAway) {
+  } else if (actHomeScore < actAwayScore) {
     actualResult = 'away';
   } else {
     actualResult = 'draw';
@@ -151,23 +154,23 @@ export const calculatePredictionPoints = (prediction, actualHomeScore, actualAwa
   if (actualResult === predResult) {
     // Empate acertado: 2 puntos
     if (actualResult === 'draw') {
-      console.log(`🤝 Empate acertado! ${predHomeScore}-${predAwayScore}`);
+      console.log('✅ Empate acertado: 2 puntos');
       return 2;
     }
     
     // Acertar ganador + goles de un equipo: 3 puntos
-    if (predHomeScore === actualHome || predAwayScore === actualAway) {
-      console.log(`⚽ Ganador + 1 resultado exacto! ${predHomeScore}-${predAwayScore}`);
+    if (predHomeScore === actHomeScore || predAwayScore === actAwayScore) {
+      console.log('✅ Ganador + goles acertados: 3 puntos');
       return 3;
     }
     
     // Solo ganador: 1 punto
-    console.log(`👍 Solo ganador acertado! ${predHomeScore}-${predAwayScore}`);
+    console.log('✅ Solo ganador acertado: 1 punto');
     return 1;
   }
   
   // No acertó nada: 0 puntos
-  console.log(`❌ No acertó nada: ${predHomeScore}-${predAwayScore} vs ${actualHome}-${actualAway}`);
+  console.log('❌ No acertó nada: 0 puntos');
   return 0;
 };
 
@@ -177,6 +180,7 @@ export const updatePredictionPoints = async (predictionId, points) => {
     const predictionRef = doc(db, 'predictions', predictionId);
     await updateDoc(predictionRef, {
       points,
+      calculatedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
     
@@ -199,10 +203,12 @@ export const calculatePointsForMatch = async (matchId, homeScore, awayScore) => 
     }
     
     await Promise.all(updates);
-    return true;
+    console.log(`✅ Puntos calculados para ${predictions.length} predicciones del partido ${matchId}`);
+    
+    return predictions.length;
   } catch (error) {
-    console.error('Error calculating match points:', error);
-    return false;
+    console.error('Error calculating points for match:', error);
+    throw error;
   }
 };
 
@@ -253,72 +259,43 @@ export const hasUserCompletedPredictions = async (userId, quinielaId, totalMatch
   }
 };
 
-// Actualizar puntos totales de un usuario para una quiniela específica
+// Actualizar puntos totales de un usuario en una quiniela específica
 export const updateUserPredictionPoints = async (userId, quinielaId) => {
   try {
-    const predictionsRef = collection(db, 'predictions');
-    const q = query(
-      predictionsRef,
-      where('userId', '==', userId),
-      where('quinielaId', '==', quinielaId)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    let totalPoints = 0;
-    
-    querySnapshot.forEach((doc) => {
-      const prediction = doc.data();
-      totalPoints += prediction.points || 0;
-    });
-    
-    // Actualizar puntos totales del usuario
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
     
-    if (userSnap.exists()) {
-      const userData = userSnap.data();
-      
-      // Obtener puntos de otras quinielas
-      const allPredictionsRef = collection(db, 'predictions');
-      const allUserPredictionsQ = query(
-        allPredictionsRef,
-        where('userId', '==', userId)
-      );
-      
-      const allUserPredictions = await getDocs(allUserPredictionsQ);
-      let grandTotalPoints = 0;
-      
-      allUserPredictions.forEach((doc) => {
-        const prediction = doc.data();
-        grandTotalPoints += prediction.points || 0;
-      });
-      
-      await updateDoc(userRef, {
-        totalPoints: grandTotalPoints,
-        updatedAt: serverTimestamp()
-      });
-      
-      console.log(`📊 Usuario ${userId}: puntos totales actualizados a ${grandTotalPoints}`);
+    if (!userSnap.exists()) {
+      console.error('Usuario no encontrado:', userId);
+      return;
     }
     
-    return totalPoints;
+    // Obtener todas las predicciones del usuario para esta quiniela
+    const predictions = await getUserPredictionsForQuiniela(userId, quinielaId);
+    const totalPoints = Object.values(predictions).reduce((sum, pred) => sum + (pred.points || 0), 0);
+    
+    // Obtener puntos totales de todas las quinielas del usuario
+    const allPredictionsRef = collection(db, 'predictions');
+    const allPredictionsQuery = query(allPredictionsRef, where('userId', '==', userId));
+    const allPredictionsSnapshot = await getDocs(allPredictionsQuery);
+    
+    let globalTotalPoints = 0;
+    allPredictionsSnapshot.forEach((doc) => {
+      const prediction = doc.data();
+      globalTotalPoints += prediction.points || 0;
+    });
+    
+    // Actualizar puntos totales del usuario
+    await updateDoc(userRef, {
+      totalPoints: globalTotalPoints,
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log(`📊 Usuario ${userId} - Quiniela ${quinielaId}: ${totalPoints} puntos | Total global: ${globalTotalPoints} puntos`);
+    
+    return { quinielaPoints: totalPoints, totalPoints: globalTotalPoints };
   } catch (error) {
     console.error('Error updating user prediction points:', error);
-    return 0;
+    return null;
   }
-};
-
-// Función para depurar predicciones
-export const debugPredictionCalculation = (prediction, actualHomeScore, actualAwayScore) => {
-  console.log('🔍 DEBUG PREDICCIÓN:');
-  console.log('- Predicción raw:', prediction);
-  console.log('- homeScore (tipo):', typeof prediction.homeScore, prediction.homeScore);
-  console.log('- awayScore (tipo):', typeof prediction.awayScore, prediction.awayScore);
-  console.log('- Resultado real:', actualHomeScore, '-', actualAwayScore);
-  console.log('- Tipo resultado:', typeof actualHomeScore, typeof actualAwayScore);
-  
-  const points = calculatePredictionPoints(prediction, actualHomeScore, actualAwayScore);
-  console.log('- Puntos calculados:', points);
-  
-  return points;
 };

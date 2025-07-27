@@ -1,4 +1,4 @@
-// src/services/scoringService.js - VERSIÓN CORREGIDA
+// src/services/scoringService.js - VERSIÓN COMPLETA CORREGIDA
 import { 
   doc, 
   getDoc,
@@ -16,20 +16,25 @@ import {
   updatePredictionPoints 
 } from './predictionsService';
 
-// Actualizar resultado de un partido y calcular puntos
+// ✅ FUNCIÓN CORREGIDA: Actualizar resultado de un partido y calcular puntos
 export const updateMatchResult = async (matchId, homeScore, awayScore) => {
   try {
-    // Asegurarse de que los scores sean números
-    const actualHomeScore = parseInt(homeScore);
-    const actualAwayScore = parseInt(awayScore);
+    // 🔧 CORRECCIÓN: Convertir a números desde el principio
+    const finalHomeScore = parseInt(homeScore);
+    const finalAwayScore = parseInt(awayScore);
     
-    console.log(`🔄 Actualizando resultado: ${actualHomeScore}-${actualAwayScore} para match ${matchId}`);
+    // Verificar que los valores sean válidos
+    if (isNaN(finalHomeScore) || isNaN(finalAwayScore) || finalHomeScore < 0 || finalAwayScore < 0) {
+      throw new Error('Marcadores inválidos');
+    }
+    
+    console.log(`🎯 Actualizando resultado: ${finalHomeScore}-${finalAwayScore}`);
     
     // 1. Actualizar el resultado del partido
     const matchRef = doc(db, 'matches', matchId);
     await updateDoc(matchRef, {
-      homeScore: actualHomeScore,
-      awayScore: actualAwayScore,
+      homeScore: finalHomeScore,
+      awayScore: finalAwayScore,
       status: 'FINISHED',
       finishedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -44,11 +49,8 @@ export const updateMatchResult = async (matchId, homeScore, awayScore) => {
     const userPointsMap = new Map();
 
     for (const prediction of predictions) {
-      const points = calculatePredictionPoints(prediction, actualHomeScore, actualAwayScore);
-      
-      console.log(`👤 Usuario ${prediction.userId}: ${points} puntos`);
-      console.log(`   Predicción: ${prediction.homeScore}-${prediction.awayScore}`);
-      console.log(`   Resultado: ${actualHomeScore}-${actualAwayScore}`);
+      // 🔧 CORRECCIÓN: Pasar los números convertidos
+      const points = calculatePredictionPoints(prediction, finalHomeScore, finalAwayScore);
       
       // Actualizar puntos de la predicción
       pointsUpdates.push(updatePredictionPoints(prediction.id, points));
@@ -58,6 +60,8 @@ export const updateMatchResult = async (matchId, homeScore, awayScore) => {
         userPointsMap.set(prediction.userId, 0);
       }
       userPointsMap.set(prediction.userId, userPointsMap.get(prediction.userId) + points);
+      
+      console.log(`👤 Usuario ${prediction.userId}: ${points} puntos (${prediction.homeScore}-${prediction.awayScore} vs ${finalHomeScore}-${finalAwayScore})`);
     }
 
     // 4. Actualizar todas las predicciones
@@ -66,19 +70,18 @@ export const updateMatchResult = async (matchId, homeScore, awayScore) => {
     // 5. Actualizar estadísticas de usuarios
     const userStatsUpdates = [];
     for (const [userId, pointsEarned] of userPointsMap) {
-      console.log(`📈 Actualizando usuario ${userId} con ${pointsEarned} puntos`);
       userStatsUpdates.push(updateUserPointsStats(userId, pointsEarned));
     }
     await Promise.all(userStatsUpdates);
 
-    console.log(`✅ Resultado actualizado: ${actualHomeScore}-${actualAwayScore}`);
+    console.log(`✅ Resultado actualizado: ${finalHomeScore}-${finalAwayScore}`);
     console.log(`📈 Puntos calculados para ${predictions.length} predicciones`);
     
     return {
       success: true,
       predictionsUpdated: predictions.length,
       usersAffected: userPointsMap.size,
-      totalPointsAwarded: Array.from(userPointsMap.values()).reduce((sum, points) => sum + points, 0)
+      message: `Resultado ${finalHomeScore}-${finalAwayScore} actualizado correctamente`
     };
 
   } catch (error) {
@@ -87,7 +90,7 @@ export const updateMatchResult = async (matchId, homeScore, awayScore) => {
   }
 };
 
-// Actualizar estadísticas de puntos de un usuario - CORREGIDO
+// Actualizar estadísticas de puntos de un usuario
 const updateUserPointsStats = async (userId, pointsEarned) => {
   try {
     const userRef = doc(db, 'users', userId);
@@ -97,7 +100,6 @@ const updateUserPointsStats = async (userId, pointsEarned) => {
     if (!userSnap.exists()) return;
     
     const userData = userSnap.data();
-    // CORRECCIÓN: Línea que estaba incompleta
     const newTotalPoints = (userData.totalPoints || 0) + pointsEarned;
     
     await updateDoc(userRef, {
@@ -105,65 +107,77 @@ const updateUserPointsStats = async (userId, pointsEarned) => {
       updatedAt: serverTimestamp()
     });
     
-    console.log(`📊 Usuario ${userId}: +${pointsEarned} puntos (total: ${newTotalPoints})`);
+    console.log(`📊 Usuario ${userId}: +${pointsEarned} puntos (Total: ${newTotalPoints})`);
+    
   } catch (error) {
-    console.error('Error updating user points:', error);
+    console.error('Error updating user points stats:', error);
   }
 };
 
-// Calcular estadísticas completas de una quiniela
+// Calcular estadísticas de una quiniela específica
 export const calculateQuinielaStats = async (quinielaId) => {
   try {
     const predictionsRef = collection(db, 'predictions');
     const q = query(predictionsRef, where('quinielaId', '==', quinielaId));
     const querySnapshot = await getDocs(q);
-    
+
     const userStats = new Map();
     const matchStats = new Map();
-    
+
     querySnapshot.forEach((doc) => {
       const prediction = doc.data();
-      
+      const userId = prediction.userId;
+      const matchId = prediction.matchId;
+
       // Estadísticas por usuario
-      if (!userStats.has(prediction.userId)) {
-        userStats.set(prediction.userId, {
-          userId: prediction.userId,
+      if (!userStats.has(userId)) {
+        userStats.set(userId, {
+          userId,
           totalPoints: 0,
-          predictions: 0,
-          correctResults: 0,
-          exactScores: 0
-        });
-      }
-      
-      const userStat = userStats.get(prediction.userId);
-      userStat.totalPoints += prediction.points || 0;
-      userStat.predictions += 1;
-      
-      if (prediction.points === 5) userStat.exactScores += 1;
-      if (prediction.points > 0) userStat.correctResults += 1;
-      
-      // Estadísticas por partido
-      if (!matchStats.has(prediction.matchId)) {
-        matchStats.set(prediction.matchId, {
-          matchId: prediction.matchId,
           totalPredictions: 0,
-          averagePoints: 0,
+          correctPredictions: 0,
           exactScores: 0
         });
       }
+
+      const userStat = userStats.get(userId);
+      userStat.totalPoints += prediction.points || 0;
+      userStat.totalPredictions += 1;
       
-      const matchStat = matchStats.get(prediction.matchId);
+      if (prediction.points > 0) {
+        userStat.correctPredictions += 1;
+      }
+      if (prediction.points === 5) {
+        userStat.exactScores += 1;
+      }
+
+      // Estadísticas por partido
+      if (!matchStats.has(matchId)) {
+        matchStats.set(matchId, {
+          matchId,
+          totalPredictions: 0,
+          totalPoints: 0,
+          perfectPredictions: 0
+        });
+      }
+
+      const matchStat = matchStats.get(matchId);
       matchStat.totalPredictions += 1;
-      if (prediction.points === 5) matchStat.exactScores += 1;
+      matchStat.totalPoints += prediction.points || 0;
+      if (prediction.points === 5) {
+        matchStat.perfectPredictions += 1;
+      }
     });
-    
+
     // Calcular promedios
-    matchStats.forEach((stat) => {
-      const totalPoints = Array.from(userStats.values())
-        .filter(u => u.predictions > 0)
-        .reduce((sum, u) => sum + u.totalPoints, 0);
+    userStats.forEach((stat) => {
       stat.averagePoints = stat.totalPredictions > 0 ? 
-        totalPoints / stat.totalPredictions : 0;
+        stat.totalPoints / stat.totalPredictions : 0;
+    });
+
+    matchStats.forEach((stat) => {
+      stat.averagePoints = stat.totalPredictions > 0 ? 
+        stat.totalPoints / stat.totalPredictions : 0;
     });
     
     // Convertir a arrays y ordenar
@@ -269,72 +283,34 @@ const calculatePayments = (ranking, winners) => {
     });
     
   } else if (winners.length === 2) {
-    // Empate en 1er lugar: el 3ro paga $25 a cada ganador
-    const thirdPlace = ranking.find(user => 
-      !winners.some(winner => winner.userId === user.userId)
+    // 2 ganadores empatados: el 3ro paga $25 a cada uno
+    const winner1 = winners[0];
+    const winner2 = winners[1];
+    const loser = ranking.find(user => 
+      user.userId !== winner1.userId && user.userId !== winner2.userId
     );
     
-    if (thirdPlace) {
-      winners.forEach(winner => {
-        payments.push({
-          from: thirdPlace.userId,
-          to: winner.userId,
-          amount: paymentAmount / 2,
-          reason: 'Tercer lugar'
-        });
+    if (loser) {
+      payments.push({
+        from: loser.userId,
+        to: winner1.userId,
+        amount: paymentAmount / 2,
+        reason: 'Quiniela perdida (empate)'
+      });
+      payments.push({
+        from: loser.userId,
+        to: winner2.userId,
+        amount: paymentAmount / 2,
+        reason: 'Quiniela perdida (empate)'
       });
     }
   }
-  // Si winners.length === 3 (triple empate): no hay pagos
+  // Si hay 3 ganadores empatados, nadie paga nada
   
   return payments;
 };
 
-// Verificar si todos los partidos de una quiniela están terminados
-export const isQuinielaComplete = async (quinielaId) => {
-  try {
-    // Obtener la quiniela
-    const quinielaRef = doc(db, 'quinielas', quinielaId);
-    const quinielaSnap = await getDoc(quinielaRef);
-    
-    if (!quinielaSnap.exists()) return false;
-    
-    const quiniela = quinielaSnap.data();
-    
-    // Verificar cada partido
-    const matchPromises = quiniela.matches.map(async (matchId) => {
-      const matchRef = doc(db, 'matches', matchId);
-      const matchSnap = await getDoc(matchRef);
-      
-      if (matchSnap.exists()) {
-        const match = matchSnap.data();
-        return match.status === 'FINISHED';
-      }
-      return false;
-    });
-    
-    const matchResults = await Promise.all(matchPromises);
-    return matchResults.every(isFinished => isFinished);
-    
-  } catch (error) {
-    console.error('Error checking if quiniela is complete:', error);
-    return false;
-  }
-};
-
-// Función de depuración para verificar puntos
-export const debugCalculatePoints = (prediction, actualHomeScore, actualAwayScore) => {
-  console.log('🔍 DEBUG - Calculando puntos:');
-  console.log('Predicción:', prediction);
-  console.log('Resultado real:', actualHomeScore, '-', actualAwayScore);
-  
-  const points = calculatePredictionPoints(prediction, actualHomeScore, actualAwayScore);
-  
-  console.log('Puntos obtenidos:', points);
-  return points;
-};
-
-// Función para recalcular puntos existentes
+// ✅ FUNCIÓN NUEVA: Recalcular puntos para un partido (utilidad para debugging)
 export const recalculateMatchPoints = async (matchId) => {
   try {
     // Obtener información del partido
@@ -342,35 +318,57 @@ export const recalculateMatchPoints = async (matchId) => {
     const matchSnap = await getDoc(matchRef);
     
     if (!matchSnap.exists()) {
-      console.error('Partido no encontrado');
-      return;
+      throw new Error('Partido no encontrado');
     }
     
-    const match = matchSnap.data();
+    const matchData = matchSnap.data();
     
-    if (match.homeScore === null || match.awayScore === null) {
-      console.log('Partido sin resultado');
-      return;
+    if (matchData.homeScore === undefined || matchData.awayScore === undefined) {
+      throw new Error('El partido no tiene resultado definido');
     }
     
-    console.log(`🔄 Recalculando puntos para partido: ${match.homeTeam} vs ${match.awayTeam}`);
-    console.log(`📊 Resultado: ${match.homeScore}-${match.awayScore}`);
-    
-    // Obtener predicciones
-    const predictions = await getPredictionsForMatch(matchId);
-    
-    for (const prediction of predictions) {
-      const newPoints = calculatePredictionPoints(prediction, match.homeScore, match.awayScore);
-      
-      console.log(`👤 ${prediction.userId}: ${prediction.homeScore}-${prediction.awayScore} = ${newPoints} puntos`);
-      
-      // Actualizar en la base de datos
-      await updatePredictionPoints(prediction.id, newPoints);
-    }
-    
-    console.log(`✅ ${predictions.length} predicciones recalculadas`);
+    // Recalcular usando la función principal
+    return await updateMatchResult(matchId, matchData.homeScore, matchData.awayScore);
     
   } catch (error) {
-    console.error('Error recalculando puntos:', error);
+    console.error('Error recalculating match points:', error);
+    throw error;
+  }
+};
+
+// ✅ FUNCIÓN NUEVA: Debugging - Verificar puntos de un partido específico
+export const debugMatchPoints = async (matchId) => {
+  try {
+    const matchRef = doc(db, 'matches', matchId);
+    const matchSnap = await getDoc(matchRef);
+    
+    if (!matchSnap.exists()) {
+      return { error: 'Partido no encontrado' };
+    }
+    
+    const matchData = matchSnap.data();
+    const predictions = await getPredictionsForMatch(matchId);
+    
+    const debugInfo = {
+      match: {
+        id: matchId,
+        homeScore: matchData.homeScore,
+        awayScore: matchData.awayScore,
+        status: matchData.status
+      },
+      predictions: predictions.map(pred => ({
+        userId: pred.userId,
+        prediction: `${pred.homeScore}-${pred.awayScore}`,
+        points: pred.points,
+        calculatedPoints: calculatePredictionPoints(pred, matchData.homeScore, matchData.awayScore)
+      }))
+    };
+    
+    console.log('🔍 Debug info for match:', debugInfo);
+    return debugInfo;
+    
+  } catch (error) {
+    console.error('Error debugging match points:', error);
+    return { error: error.message };
   }
 };
