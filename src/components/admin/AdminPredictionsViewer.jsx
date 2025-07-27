@@ -1,4 +1,4 @@
-// src/components/admin/AdminPredictionsViewer.jsx
+// src/components/admin/AdminPredictionsViewer.jsx - VERSIÓN CORREGIDA
 import React, { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -11,7 +11,6 @@ import {
 import { db } from '../../services/firebase';
 import { getCurrentQuiniela } from '../../services/quinielaService';
 import { getAllUsers } from '../../services/userService';
-import { formatMatchDate } from '../../services/footballService';
 
 export default function AdminPredictionsViewer() {
   const [currentQuiniela, setCurrentQuiniela] = useState(null);
@@ -21,6 +20,7 @@ export default function AdminPredictionsViewer() {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState('all');
   const [selectedMatch, setSelectedMatch] = useState('all');
+  const [debugInfo, setDebugInfo] = useState({}); // Para debugging
 
   useEffect(() => {
     loadData();
@@ -28,75 +28,134 @@ export default function AdminPredictionsViewer() {
 
   const loadData = async () => {
     setLoading(true);
+    console.log('🔄 Cargando datos del admin...');
+    
     try {
-      // Cargar quiniela actual
+      // 1. Cargar quiniela actual
       const quiniela = await getCurrentQuiniela();
+      console.log('📊 Quiniela cargada:', quiniela);
       setCurrentQuiniela(quiniela);
 
-      if (quiniela) {
-        // Cargar usuarios
-        const usersData = await getAllUsers();
-        setUsers(usersData.filter(user => user.role === 'user')); // Solo usuarios regulares
-
-        // Cargar partidos de la quiniela
-        const matchesData = await Promise.all(
-          quiniela.matches.map(async (matchId) => {
-            const matchRef = doc(db, 'matches', matchId);
-            const matchSnap = await getDoc(matchRef);
-            
-            if (matchSnap.exists()) {
-              return { id: matchSnap.id, ...matchSnap.data() };
-            }
-            return null;
-          })
-        );
-        
-        const validMatches = matchesData
-          .filter(match => match != null)
-          .sort((a, b) => {
-            const dateA = match.date?.toDate ? match.date.toDate() : new Date(match.date);
-            const dateB = match.date?.toDate ? match.date.toDate() : new Date(match.date);
-            return dateA - dateB;
-          });
-        setMatches(validMatches);
-
-        // Cargar todas las predicciones
-        const predictionsRef = collection(db, 'predictions');
-        const q = query(predictionsRef, where('quinielaId', '==', quiniela.id));
-        const predictionsSnap = await getDocs(q);
-        
-        const predictionsData = {};
-        predictionsSnap.forEach((doc) => {
-          const prediction = doc.data();
-          const key = `${prediction.userId}_${prediction.matchId}`;
-          predictionsData[key] = prediction;
-        });
-        
-        setAllPredictions(predictionsData);
+      if (!quiniela) {
+        console.warn('❌ No hay quiniela actual');
+        setLoading(false);
+        return;
       }
+
+      // 2. Cargar usuarios (excluir admins)
+      const allUsersData = await getAllUsers();
+      const regularUsers = allUsersData.filter(user => user.role !== 'admin');
+      console.log('👥 Usuarios cargados:', regularUsers.length);
+      setUsers(regularUsers);
+
+      // 3. Cargar partidos de la quiniela
+      console.log('🏈 Cargando partidos:', quiniela.matches);
+      const matchesPromises = quiniela.matches.map(async (matchId) => {
+        try {
+          const matchRef = doc(db, 'matches', matchId);
+          const matchSnap = await getDoc(matchRef);
+          
+          if (matchSnap.exists()) {
+            const matchData = matchSnap.data();
+            return { 
+              id: matchSnap.id, 
+              ...matchData,
+              // ✅ CORRECCIÓN: Normalizar fecha
+              date: matchData.date?.toDate ? matchData.date.toDate() : new Date(matchData.date)
+            };
+          } else {
+            console.warn(`⚠️ Partido ${matchId} no encontrado`);
+            return null;
+          }
+        } catch (error) {
+          console.error(`❌ Error cargando partido ${matchId}:`, error);
+          return null;
+        }
+      });
+      
+      const matchesResults = await Promise.all(matchesPromises);
+      const validMatches = matchesResults
+        .filter(match => match !== null)
+        .sort((a, b) => a.date - b.date);
+      
+      console.log('⚽ Partidos válidos cargados:', validMatches.length);
+      setMatches(validMatches);
+
+      // 4. Cargar todas las predicciones
+      console.log('📝 Cargando predicciones...');
+      const predictionsRef = collection(db, 'predictions');
+      const q = query(predictionsRef, where('quinielaId', '==', quiniela.id));
+      const predictionsSnap = await getDocs(q);
+      
+      const predictionsData = {};
+      let totalPredictions = 0;
+      
+      predictionsSnap.forEach((doc) => {
+        const prediction = doc.data();
+        const key = `${prediction.userId}_${prediction.matchId}`;
+        predictionsData[key] = prediction;
+        totalPredictions++;
+      });
+      
+      console.log('📊 Predicciones cargadas:', totalPredictions);
+      setAllPredictions(predictionsData);
+
+      // 5. Generar información de debug
+      const debugData = {
+        quinielaId: quiniela.id,
+        totalUsers: regularUsers.length,
+        totalMatches: validMatches.length,
+        totalPredictions: totalPredictions,
+        expectedPredictions: regularUsers.length * validMatches.length,
+        completionRate: validMatches.length > 0 ? 
+          ((totalPredictions / (regularUsers.length * validMatches.length)) * 100).toFixed(1) : 0
+      };
+      
+      console.log('🔍 Debug Info:', debugData);
+      setDebugInfo(debugData);
+
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('❌ Error cargando datos:', error);
     }
     setLoading(false);
   };
 
-  const getPrediction = (userId, matchId) => {
-    return allPredictions[`${userId}_${matchId}`] || null;
-  };
-
+  // ✅ FUNCIÓN CORREGIDA: Calcular estadísticas de usuario
   const getUserCompletionStats = (userId) => {
-    const userPredictions = matches.filter(match => 
-      getPrediction(userId, match.id) !== null
-    );
-    return {
-      completed: userPredictions.length,
-      total: matches.length,
-      percentage: Math.round((userPredictions.length / matches.length) * 100)
-    };
+    try {
+      if (!matches.length) {
+        return { completed: 0, total: 0, percentage: 0 };
+      }
+
+      const userPredictions = matches.filter(match => 
+        getPrediction(userId, match.id) !== null
+      );
+      
+      const completed = userPredictions.length;
+      const total = matches.length;
+      const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+      
+      return { completed, total, percentage };
+    } catch (error) {
+      console.error('Error calculando stats de usuario:', error);
+      return { completed: 0, total: 0, percentage: 0 };
+    }
   };
 
+  // ✅ FUNCIÓN CORREGIDA: Obtener predicción
+  const getPrediction = (userId, matchId) => {
+    const key = `${userId}_${matchId}`;
+    return allPredictions[key] || null;
+  };
+
+  // ✅ FUNCIÓN CORREGIDA: Contar predicciones por partido
   const getMatchPredictionsCount = (matchId) => {
-    return users.filter(user => getPrediction(user.id, matchId) !== null).length;
+    try {
+      return users.filter(user => getPrediction(user.id, matchId) !== null).length;
+    } catch (error) {
+      console.error('Error contando predicciones del partido:', error);
+      return 0;
+    }
   };
 
   const filteredUsers = selectedUser === 'all' ? users : users.filter(u => u.id === selectedUser);
@@ -160,7 +219,7 @@ export default function AdminPredictionsViewer() {
 
   return (
     <div style={{ color: 'white' }}>
-      {/* Header */}
+      {/* Header con Debug Info */}
       <div style={{
         background: 'rgba(255, 255, 255, 0.1)',
         backdropFilter: 'blur(10px)',
@@ -183,67 +242,55 @@ export default function AdminPredictionsViewer() {
 
         {/* Filtros */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          display: 'flex',
           gap: '16px',
-          marginBottom: '16px'
+          marginBottom: '16px',
+          flexWrap: 'wrap'
         }}>
           <div>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: 'rgba(255, 255, 255, 0.9)',
-              marginBottom: '8px'
-            }}>
-              👤 Filtrar por Usuario:
+            <label style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
+              👤 Filtrar:
             </label>
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
               style={{
-                width: '100%',
-                padding: '8px',
-                borderRadius: '8px',
+                padding: '8px 12px',
+                borderRadius: '6px',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
-                background: 'rgba(255, 255, 255, 0.9)',
-                color: '#374151'
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: 'white',
+                fontSize: '14px'
               }}
             >
               <option value="all">Todos los usuarios</option>
               {users.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.email})
+                <option key={user.id} value={user.id} style={{ color: 'black' }}>
+                  {user.name}
                 </option>
               ))}
             </select>
           </div>
-
+          
           <div>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: 'rgba(255, 255, 255, 0.9)',
-              marginBottom: '8px'
-            }}>
+            <label style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
               ⚽ Filtrar por Partido:
             </label>
             <select
               value={selectedMatch}
               onChange={(e) => setSelectedMatch(e.target.value)}
               style={{
-                width: '100%',
-                padding: '8px',
-                borderRadius: '8px',
+                padding: '8px 12px',
+                borderRadius: '6px',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
-                background: 'rgba(255, 255, 255, 0.9)',
-                color: '#374151'
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: 'white',
+                fontSize: '14px'
               }}
             >
               <option value="all">Todos los partidos</option>
               {matches.map(match => (
-                <option key={match.id} value={match.id}>
+                <option key={match.id} value={match.id} style={{ color: 'black' }}>
                   {match.homeTeam} vs {match.awayTeam}
                 </option>
               ))}
@@ -251,7 +298,7 @@ export default function AdminPredictionsViewer() {
           </div>
         </div>
 
-        {/* Estadísticas Generales */}
+        {/* ✅ ESTADÍSTICAS CORREGIDAS */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -264,7 +311,7 @@ export default function AdminPredictionsViewer() {
             border: '1px solid rgba(59, 130, 246, 0.4)'
           }}>
             <div style={{ fontSize: '20px', fontWeight: 'bold' }}>
-              {users.length}
+              {debugInfo.totalUsers || 0}
             </div>
             <div style={{ fontSize: '12px', opacity: 0.8 }}>
               👥 Usuarios Totales
@@ -278,7 +325,7 @@ export default function AdminPredictionsViewer() {
             border: '1px solid rgba(16, 185, 129, 0.4)'
           }}>
             <div style={{ fontSize: '20px', fontWeight: 'bold' }}>
-              {matches.length}
+              {debugInfo.totalMatches || 0}
             </div>
             <div style={{ fontSize: '12px', opacity: 0.8 }}>
               ⚽ Partidos Total
@@ -292,10 +339,24 @@ export default function AdminPredictionsViewer() {
             border: '1px solid rgba(245, 158, 11, 0.4)'
           }}>
             <div style={{ fontSize: '20px', fontWeight: 'bold' }}>
-              {Object.keys(allPredictions).length}
+              {debugInfo.totalPredictions || 0}
             </div>
             <div style={{ fontSize: '12px', opacity: 0.8 }}>
               📝 Predicciones Totales
+            </div>
+          </div>
+
+          <div style={{
+            background: 'rgba(168, 85, 247, 0.2)',
+            padding: '12px',
+            borderRadius: '8px',
+            border: '1px solid rgba(168, 85, 247, 0.4)'
+          }}>
+            <div style={{ fontSize: '20px', fontWeight: 'bold' }}>
+              {debugInfo.completionRate || 0}%
+            </div>
+            <div style={{ fontSize: '12px', opacity: 0.8 }}>
+              📊 Completitud General
             </div>
           </div>
         </div>
@@ -317,7 +378,7 @@ export default function AdminPredictionsViewer() {
             color: 'white',
             margin: '0 0 16px 0'
           }}>
-            📊 Resumen por Usuario
+            📊 Resumen
           </h4>
 
           <div style={{
@@ -349,7 +410,7 @@ export default function AdminPredictionsViewer() {
                         fontWeight: 'bold',
                         color: 'white'
                       }}>
-                        {user.name}
+                        {user.name || user.email.split('@')[0]}
                       </div>
                       <div style={{
                         fontSize: '12px',
@@ -405,12 +466,6 @@ export default function AdminPredictionsViewer() {
                       cursor: 'pointer',
                       transition: 'all 0.3s ease'
                     }}
-                    onMouseOver={(e) => {
-                      e.target.style.background = 'rgba(59, 130, 246, 0.5)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.target.style.background = 'rgba(59, 130, 246, 0.3)';
-                    }}
                   >
                     👀 Ver Predicciones Detalladas
                   </button>
@@ -421,7 +476,7 @@ export default function AdminPredictionsViewer() {
         </div>
       )}
 
-      {/* Vista Detallada */}
+      {/* Tabla de Predicciones Detalladas */}
       <div style={{
         background: 'rgba(255, 255, 255, 0.1)',
         backdropFilter: 'blur(10px)',
@@ -462,7 +517,7 @@ export default function AdminPredictionsViewer() {
           )}
         </div>
 
-        {/* Tabla de Predicciones */}
+        {/* Tabla */}
         <div style={{
           overflowX: 'auto',
           borderRadius: '8px',
@@ -471,7 +526,8 @@ export default function AdminPredictionsViewer() {
           <table style={{
             width: '100%',
             borderCollapse: 'collapse',
-            background: 'rgba(255, 255, 255, 0.05)'
+            background: 'rgba(255, 255, 255, 0.05)',
+            fontSize: '14px'
           }}>
             <thead>
               <tr style={{
@@ -483,7 +539,8 @@ export default function AdminPredictionsViewer() {
                   textAlign: 'left',
                   fontSize: '12px',
                   fontWeight: 'bold',
-                  color: 'rgba(255, 255, 255, 0.9)'
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  minWidth: '200px'
                 }}>
                   📅 Partido
                 </th>
@@ -499,87 +556,82 @@ export default function AdminPredictionsViewer() {
                       minWidth: '120px'
                     }}
                   >
-                    👤 {user.name}
+                    {user.name || user.email.split('@')[0]}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filteredMatches.map(match => (
+              {filteredMatches.map((match, index) => (
                 <tr
                   key={match.id}
                   style={{
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent'
                   }}
                 >
                   <td style={{
                     padding: '12px',
-                    fontSize: '14px',
-                    color: 'white'
+                    borderRight: '1px solid rgba(255, 255, 255, 0.1)'
                   }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                    <div style={{
+                      fontWeight: 'bold',
+                      color: 'white',
+                      marginBottom: '4px'
+                    }}>
                       {match.homeTeam} vs {match.awayTeam}
                     </div>
                     <div style={{
-                      fontSize: '12px',
-                      color: 'rgba(255, 255, 255, 0.7)'
+                      fontSize: '11px',
+                      color: 'rgba(255, 255, 255, 0.6)'
                     }}>
-                      {formatMatchDate(match.date)}
+                      {match.league} • {match.date.toLocaleDateString('es-MX')}
                     </div>
                     <div style={{
                       fontSize: '11px',
-                      color: 'rgba(255, 255, 255, 0.6)',
-                      marginTop: '4px'
+                      color: 'rgba(255, 255, 255, 0.5)',
+                      marginTop: '2px'
                     }}>
-                      📊 {getMatchPredictionsCount(match.id)}/{users.length} predicciones
+                      {getMatchPredictionsCount(match.id)}/{users.length} predicciones
                     </div>
                   </td>
-                  
                   {filteredUsers.map(user => {
                     const prediction = getPrediction(user.id, match.id);
                     return (
                       <td
-                        key={`${user.id}_${match.id}`}
+                        key={user.id}
                         style={{
                           padding: '12px',
                           textAlign: 'center',
-                          fontSize: '14px'
+                          borderRight: '1px solid rgba(255, 255, 255, 0.1)'
                         }}
                       >
                         {prediction ? (
                           <div style={{
-                            background: 'rgba(16, 185, 129, 0.2)',
-                            padding: '8px',
+                            background: 'rgba(59, 130, 246, 0.2)',
+                            border: '1px solid rgba(59, 130, 246, 0.4)',
                             borderRadius: '6px',
-                            border: '1px solid rgba(16, 185, 129, 0.4)'
+                            padding: '6px',
+                            color: 'white',
+                            fontWeight: 'bold'
                           }}>
-                            <div style={{
-                              fontWeight: 'bold',
-                              color: 'white',
-                              fontSize: '16px'
-                            }}>
-                              {prediction.homeScore} - {prediction.awayScore}
-                            </div>
+                            {prediction.homeScore} - {prediction.awayScore}
                             {prediction.points !== undefined && (
                               <div style={{
-                                fontSize: '11px',
-                                color: 'rgba(255, 255, 255, 0.8)',
-                                marginTop: '2px'
+                                fontSize: '10px',
+                                marginTop: '2px',
+                                color: prediction.points > 0 ? 'white' : 'white'
                               }}>
-                                🏆 {prediction.points} pts
+                                {prediction.points} pts
                               </div>
                             )}
                           </div>
                         ) : (
                           <div style={{
-                            background: 'rgba(239, 68, 68, 0.2)',
-                            padding: '8px',
-                            borderRadius: '6px',
-                            border: '1px solid rgba(239, 68, 68, 0.4)',
-                            color: 'rgba(255, 255, 255, 0.7)',
+                            color: 'rgba(255, 255, 255, 0.4)',
                             fontSize: '12px'
                           }}>
-                            ❌ Sin predicción
+                            Sin predicción
                           </div>
                         )}
                       </td>
@@ -590,6 +642,16 @@ export default function AdminPredictionsViewer() {
             </tbody>
           </table>
         </div>
+
+        {filteredMatches.length === 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: '32px',
+            color: 'rgba(255, 255, 255, 0.6)'
+          }}>
+            No hay partidos que mostrar
+          </div>
+        )}
       </div>
     </div>
   );
