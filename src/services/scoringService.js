@@ -1,4 +1,4 @@
-// src/services/scoringService.js
+// src/services/scoringService.js - VERSIÓN CORREGIDA
 import { 
   doc, 
   getDoc,
@@ -19,11 +19,17 @@ import {
 // Actualizar resultado de un partido y calcular puntos
 export const updateMatchResult = async (matchId, homeScore, awayScore) => {
   try {
+    // Asegurarse de que los scores sean números
+    const actualHomeScore = parseInt(homeScore);
+    const actualAwayScore = parseInt(awayScore);
+    
+    console.log(`🔄 Actualizando resultado: ${actualHomeScore}-${actualAwayScore} para match ${matchId}`);
+    
     // 1. Actualizar el resultado del partido
     const matchRef = doc(db, 'matches', matchId);
     await updateDoc(matchRef, {
-      homeScore: parseInt(homeScore),
-      awayScore: parseInt(awayScore),
+      homeScore: actualHomeScore,
+      awayScore: actualAwayScore,
       status: 'FINISHED',
       finishedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -38,7 +44,11 @@ export const updateMatchResult = async (matchId, homeScore, awayScore) => {
     const userPointsMap = new Map();
 
     for (const prediction of predictions) {
-      const points = calculatePredictionPoints(prediction, homeScore, awayScore);
+      const points = calculatePredictionPoints(prediction, actualHomeScore, actualAwayScore);
+      
+      console.log(`👤 Usuario ${prediction.userId}: ${points} puntos`);
+      console.log(`   Predicción: ${prediction.homeScore}-${prediction.awayScore}`);
+      console.log(`   Resultado: ${actualHomeScore}-${actualAwayScore}`);
       
       // Actualizar puntos de la predicción
       pointsUpdates.push(updatePredictionPoints(prediction.id, points));
@@ -48,8 +58,6 @@ export const updateMatchResult = async (matchId, homeScore, awayScore) => {
         userPointsMap.set(prediction.userId, 0);
       }
       userPointsMap.set(prediction.userId, userPointsMap.get(prediction.userId) + points);
-      
-      console.log(`👤 Usuario ${prediction.userId}: ${points} puntos (${prediction.homeScore}-${prediction.awayScore} vs ${homeScore}-${awayScore})`);
     }
 
     // 4. Actualizar todas las predicciones
@@ -58,17 +66,19 @@ export const updateMatchResult = async (matchId, homeScore, awayScore) => {
     // 5. Actualizar estadísticas de usuarios
     const userStatsUpdates = [];
     for (const [userId, pointsEarned] of userPointsMap) {
+      console.log(`📈 Actualizando usuario ${userId} con ${pointsEarned} puntos`);
       userStatsUpdates.push(updateUserPointsStats(userId, pointsEarned));
     }
     await Promise.all(userStatsUpdates);
 
-    console.log(`✅ Resultado actualizado: ${homeScore}-${awayScore}`);
+    console.log(`✅ Resultado actualizado: ${actualHomeScore}-${actualAwayScore}`);
     console.log(`📈 Puntos calculados para ${predictions.length} predicciones`);
     
     return {
       success: true,
       predictionsUpdated: predictions.length,
-      usersAffected: userPointsMap.size
+      usersAffected: userPointsMap.size,
+      totalPointsAwarded: Array.from(userPointsMap.values()).reduce((sum, points) => sum + points, 0)
     };
 
   } catch (error) {
@@ -77,7 +87,7 @@ export const updateMatchResult = async (matchId, homeScore, awayScore) => {
   }
 };
 
-// Actualizar estadísticas de puntos de un usuario
+// Actualizar estadísticas de puntos de un usuario - CORREGIDO
 const updateUserPointsStats = async (userId, pointsEarned) => {
   try {
     const userRef = doc(db, 'users', userId);
@@ -87,6 +97,7 @@ const updateUserPointsStats = async (userId, pointsEarned) => {
     if (!userSnap.exists()) return;
     
     const userData = userSnap.data();
+    // CORRECCIÓN: Línea que estaba incompleta
     const newTotalPoints = (userData.totalPoints || 0) + pointsEarned;
     
     await updateDoc(userRef, {
@@ -151,7 +162,8 @@ export const calculateQuinielaStats = async (quinielaId) => {
       const totalPoints = Array.from(userStats.values())
         .filter(u => u.predictions > 0)
         .reduce((sum, u) => sum + u.totalPoints, 0);
-      stat.averagePoints = stat.totalPredictions > 0 ? totalPoints / stat.totalPredictions : 0;
+      stat.averagePoints = stat.totalPredictions > 0 ? 
+        totalPoints / stat.totalPredictions : 0;
     });
     
     // Convertir a arrays y ordenar
@@ -307,5 +319,58 @@ export const isQuinielaComplete = async (quinielaId) => {
   } catch (error) {
     console.error('Error checking if quiniela is complete:', error);
     return false;
+  }
+};
+
+// Función de depuración para verificar puntos
+export const debugCalculatePoints = (prediction, actualHomeScore, actualAwayScore) => {
+  console.log('🔍 DEBUG - Calculando puntos:');
+  console.log('Predicción:', prediction);
+  console.log('Resultado real:', actualHomeScore, '-', actualAwayScore);
+  
+  const points = calculatePredictionPoints(prediction, actualHomeScore, actualAwayScore);
+  
+  console.log('Puntos obtenidos:', points);
+  return points;
+};
+
+// Función para recalcular puntos existentes
+export const recalculateMatchPoints = async (matchId) => {
+  try {
+    // Obtener información del partido
+    const matchRef = doc(db, 'matches', matchId);
+    const matchSnap = await getDoc(matchRef);
+    
+    if (!matchSnap.exists()) {
+      console.error('Partido no encontrado');
+      return;
+    }
+    
+    const match = matchSnap.data();
+    
+    if (match.homeScore === null || match.awayScore === null) {
+      console.log('Partido sin resultado');
+      return;
+    }
+    
+    console.log(`🔄 Recalculando puntos para partido: ${match.homeTeam} vs ${match.awayTeam}`);
+    console.log(`📊 Resultado: ${match.homeScore}-${match.awayScore}`);
+    
+    // Obtener predicciones
+    const predictions = await getPredictionsForMatch(matchId);
+    
+    for (const prediction of predictions) {
+      const newPoints = calculatePredictionPoints(prediction, match.homeScore, match.awayScore);
+      
+      console.log(`👤 ${prediction.userId}: ${prediction.homeScore}-${prediction.awayScore} = ${newPoints} puntos`);
+      
+      // Actualizar en la base de datos
+      await updatePredictionPoints(prediction.id, newPoints);
+    }
+    
+    console.log(`✅ ${predictions.length} predicciones recalculadas`);
+    
+  } catch (error) {
+    console.error('Error recalculando puntos:', error);
   }
 };

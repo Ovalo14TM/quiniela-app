@@ -7,6 +7,7 @@ import AdminUserManagement from './AdminUserManagement';
 import ResultsManagement from './ResultsManagement';
 import PaymentsManagement from './PaymentsManagement';
 import AdminQuinielaControl from './AdminQuinielaControl';
+import QuinielaExportComponent from './QuinielaExportComponent';
 
 
 export default function AdminPanel() {
@@ -249,6 +250,13 @@ export default function AdminPanel() {
             isActive={activeTab === 'control'}
             onClick={setActiveTab}
           />
+          <TabButton
+            tabId="export"
+            label="Exportar Quiniela"
+            icon="📥"
+            isActive={activeTab === 'export'}
+            onClick={setActiveTab}
+            />
         </div>
       </div>
 
@@ -694,6 +702,13 @@ export default function AdminPanel() {
         </div>
         
       )}
+      {activeTab === 'export' && (
+  <div style={{
+    animation: 'fadeIn 0.6s ease-out'
+  }}>
+    <QuinielaExportComponent />
+  </div>
+)}
       {activeTab === 'control' && (
   <div style={{
     display: 'flex',
