@@ -111,24 +111,30 @@ const scheduleQuinielaNotifications = async (quinielaId, quinielaData) => {
 
 export const getCurrentQuiniela = async () => {
   try {
-    // Obtener directamente la quiniela que creaste
-    const quinielaRef = doc(db, 'quinielas', 'week_2025_30');
-    const quinielaSnap = await getDoc(quinielaRef);
+    const quinielasRef = collection(db, 'quinielas');
+    const q = query(
+      quinielasRef,
+      where('isActive', '==', true),
+      where('status', 'in', ['open', 'closed', 'in_progress']),
+      orderBy('createdAt', 'desc')
+    );
     
-    if (quinielaSnap.exists()) {
-      const quinielaData = { id: quinielaSnap.id, ...quinielaSnap.data() };
-      console.log('✅ Quiniela cargada:', quinielaData.title);
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const quinielaDoc = querySnapshot.docs[0];
+      const quinielaData = { id: quinielaDoc.id, ...quinielaDoc.data() };
+      console.log('✅ Quiniela activa cargada:', quinielaData.title);
       return quinielaData;
     }
     
-    console.log('❌ No se encontró la quiniela');
+    console.log('❌ No se encontró ninguna quiniela activa');
     return null;
   } catch (error) {
     console.error('Error:', error);
     return null;
   }
 };
-
 
 
 // Verificar y actualizar el estado de la quiniela automáticamente

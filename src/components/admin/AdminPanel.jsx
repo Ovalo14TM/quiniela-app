@@ -8,6 +8,8 @@ import ResultsManagement from './ResultsManagement';
 import PaymentsManagement from './PaymentsManagement';
 import AdminQuinielaControl from './AdminQuinielaControl';
 import QuinielaExportComponent from './QuinielaExportComponent';
+import Importador from './Importador';
+
 
 
 export default function AdminPanel() {
@@ -257,6 +259,13 @@ export default function AdminPanel() {
             isActive={activeTab === 'export'}
             onClick={setActiveTab}
             />
+            <TabButton
+  tabId="import"
+  label="Importar Histórico" 
+  icon="📚"
+  isActive={activeTab === 'import'}
+  onClick={setActiveTab}
+/>
         </div>
       </div>
 
@@ -709,6 +718,8 @@ export default function AdminPanel() {
     <QuinielaExportComponent />
   </div>
 )}
+{activeTab === 'import' && <Importador />}
+
       {activeTab === 'control' && (
   <div style={{
     display: 'flex',
