@@ -101,23 +101,22 @@ export const disputePayment = async (paymentId, disputedByUserId, reason) => {
   }
 };
 
-// Obtener pagos de un usuario
+
 export const getUserPayments = async (userId) => {
   try {
+    console.log('🔍 Cargando pagos para usuario:', userId);
     const paymentsRef = collection(db, 'payments');
     
-    // Pagos que debe hacer
+    // Pagos que debe hacer - SIN orderBy para evitar errores de índice
     const paymentsDueQuery = query(
       paymentsRef,
-      where('fromUser', '==', userId),
-      orderBy('createdAt', 'desc')
+      where('fromUser', '==', userId)
     );
     
-    // Pagos que debe recibir
+    // Pagos que debe recibir - SIN orderBy para evitar errores de índice
     const paymentsToReceiveQuery = query(
       paymentsRef,
-      where('toUser', '==', userId),
-      orderBy('createdAt', 'desc')
+      where('toUser', '==', userId)
     );
     
     const [paymentsDueSnap, paymentsToReceiveSnap] = await Promise.all([
@@ -135,6 +134,21 @@ export const getUserPayments = async (userId) => {
     paymentsToReceiveSnap.forEach((doc) => {
       paymentsToReceive.push({ id: doc.id, ...doc.data() });
     });
+    
+    // Ordenar en JavaScript después de obtener los datos
+    paymentsDue.sort((a, b) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+      return dateB - dateA; // Descendente (más reciente primero)
+    });
+    
+    paymentsToReceive.sort((a, b) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+      return dateB - dateA; // Descendente (más reciente primero)
+    });
+    
+    console.log(`💰 Encontrados: ${paymentsDue.length} pagos por hacer, ${paymentsToReceive.length} por recibir`);
     
     return {
       paymentsDue,
