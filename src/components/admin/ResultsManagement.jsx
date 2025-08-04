@@ -1,4 +1,4 @@
-// src/components/admin/ResultsManagement.jsx - Versión con diseño mejorado
+// src/components/admin/ResultsManagement.jsx - Versión mejorada con actualización masiva
 import React, { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
@@ -14,6 +14,12 @@ export default function ResultsManagement() {
   const [updating, setUpdating] = useState(null);
   const [quinielaStats, setQuinielaStats] = useState(null);
   const [winners, setWinners] = useState(null);
+  
+  // Estados para actualización masiva
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkResults, setBulkResults] = useState(new Map());
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [validationErrors, setValidationErrors] = useState(new Map());
 
   useEffect(() => {
     loadCurrentQuiniela();
@@ -66,6 +72,7 @@ export default function ResultsManagement() {
     setLoading(false);
   };
 
+  // Función original para actualización individual
   const handleUpdateResult = async (matchId, homeScore, awayScore) => {
     if (homeScore === '' || awayScore === '' || homeScore < 0 || awayScore < 0) {
       alert('Por favor ingresa resultados válidos');
@@ -88,28 +95,186 @@ export default function ResultsManagement() {
     setUpdating(null);
   };
 
+  // ✅ NUEVAS FUNCIONES PARA ACTUALIZACIÓN MASIVA
+
+  const handleBulkScoreChange = (matchId, type, value) => {
+    if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 99)) {
+      const newBulkResults = new Map(bulkResults);
+      const current = newBulkResults.get(matchId) || { homeScore: '', awayScore: '' };
+      current[type] = value;
+      newBulkResults.set(matchId, current);
+      setBulkResults(newBulkResults);
+      
+      // Limpiar errores de validación
+      const newErrors = new Map(validationErrors);
+      newErrors.delete(matchId);
+      setValidationErrors(newErrors);
+    }
+  };
+
+  const validateBulkResults = () => {
+    const errors = new Map();
+    const validMatches = new Map();
+
+    bulkResults.forEach((scores, matchId) => {
+      const { homeScore, awayScore } = scores;
+      
+      if (homeScore === '' || awayScore === '') {
+        errors.set(matchId, 'Marcador incompleto');
+      } else if (parseInt(homeScore) < 0 || parseInt(awayScore) < 0) {
+        errors.set(matchId, 'Marcador inválido');
+      } else if (isNaN(parseInt(homeScore)) || isNaN(parseInt(awayScore))) {
+        errors.set(matchId, 'Debe ser un número');
+      } else {
+        validMatches.set(matchId, {
+          homeScore: parseInt(homeScore),
+          awayScore: parseInt(awayScore)
+        });
+      }
+    });
+
+    setValidationErrors(errors);
+    return { validMatches, errors };
+  };
+
+  const handleBulkUpdate = async () => {
+    const { validMatches, errors } = validateBulkResults();
+
+    if (errors.size > 0) {
+      alert(`❌ Hay ${errors.size} errores que corregir antes de continuar`);
+      return;
+    }
+
+    if (validMatches.size === 0) {
+      alert('⚠️ No hay resultados para actualizar');
+      return;
+    }
+
+    // Mostrar confirmación detallada
+    const matchesList = Array.from(validMatches.entries()).map(([matchId, scores]) => {
+      const match = matches.find(m => m.id === matchId);
+      return `• ${match.homeTeam} ${scores.homeScore} - ${scores.awayScore} ${match.awayTeam}`;
+    }).join('\n');
+
+    const confirmMessage = `🎯 ACTUALIZACIÓN MASIVA DE RESULTADOS
+
+Se actualizarán ${validMatches.size} partidos:
+
+${matchesList}
+
+⚠️ Esta acción:
+• Calculará puntos automáticamente
+• Actualizará rankings
+• Enviará notificaciones
+
+¿Continuar?`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    setBulkUpdating(true);
+    const results = [];
+    let totalPredictions = 0;
+    let totalUsers = 0;
+
+    try {
+      // Procesar actualizaciones una por una para mantener integridad
+      for (const [matchId, scores] of validMatches.entries()) {
+        try {
+          const result = await updateMatchResult(
+            matchId, 
+            scores.homeScore, 
+            scores.awayScore
+          );
+          
+          const match = matches.find(m => m.id === matchId);
+          results.push({
+            match: `${match.homeTeam} ${scores.homeScore}-${scores.awayScore} ${match.awayTeam}`,
+            success: true,
+            ...result
+          });
+          
+          totalPredictions += result.predictionsUpdated;
+          totalUsers += result.usersAffected;
+          
+        } catch (error) {
+          const match = matches.find(m => m.id === matchId);
+          results.push({
+            match: `${match.homeTeam} vs ${match.awayTeam}`,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+
+      // Mostrar resumen detallado
+      const successCount = results.filter(r => r.success).length;
+      const errorCount = results.filter(r => !r.success).length;
+
+      const summaryMessage = `✅ ACTUALIZACIÓN COMPLETADA
+
+📊 Resumen:
+• ${successCount} partidos actualizados correctamente
+• ${errorCount} errores
+• ${totalPredictions} predicciones calculadas
+• ${totalUsers} usuarios afectados
+
+${errorCount > 0 ? `\n❌ Errores:\n${results.filter(r => !r.success).map(r => `• ${r.match}: ${r.error}`).join('\n')}` : ''}
+
+✅ Actualizaciones exitosas:
+${results.filter(r => r.success).map(r => `• ${r.match}`).join('\n')}`;
+
+      alert(summaryMessage);
+
+      // Limpiar estado y recargar datos
+      setBulkResults(new Map());
+      setValidationErrors(new Map());
+      setBulkMode(false);
+      await loadCurrentQuiniela();
+
+    } catch (error) {
+      console.error('Error in bulk update:', error);
+      alert('❌ Error en la actualización masiva');
+    }
+    setBulkUpdating(false);
+  };
+
+  const toggleBulkMode = () => {
+    setBulkMode(!bulkMode);
+    setBulkResults(new Map());
+    setValidationErrors(new Map());
+  };
+
+  const cancelBulkMode = () => {
+    setBulkMode(false);
+    setBulkResults(new Map());
+    setValidationErrors(new Map());
+  };
+
   if (loading) {
     return (
       <div style={{
+        minHeight: '400px',
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '64px',
-        textAlign: 'center'
+        color: 'white'
       }}>
         <div style={{
-          width: '48px',
-          height: '48px',
-          border: '4px solid rgba(255, 255, 255, 0.3)',
-          borderTop: '4px solid white',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          marginBottom: '16px'
-        }}></div>
-        <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '16px', margin: 0 }}>
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          fontSize: '18px'
+        }}>
+          <div style={{
+            width: '24px',
+            height: '24px',
+            border: '3px solid rgba(255, 255, 255, 0.3)',
+            borderTop: '3px solid white',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }}></div>
           Cargando quiniela...
-        </p>
+        </div>
       </div>
     );
   }
@@ -117,152 +282,239 @@ export default function ResultsManagement() {
   if (!currentQuiniela) {
     return (
       <div style={{
-        background: 'rgba(255, 255, 255, 0.1)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: '16px',
-        padding: '24px',
-        border: '1px solid rgba(255, 255, 255, 0.2)'
+        minHeight: '400px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        textAlign: 'center'
       }}>
-        <div style={{
-          textAlign: 'center',
-          padding: '64px'
-        }}>
-          <div style={{ fontSize: '80px', marginBottom: '24px', opacity: 0.7 }}>📋</div>
-          <h3 style={{
-            fontSize: '24px',
-            fontWeight: 'bold',
-            color: 'white',
-            margin: '0 0 12px 0'
-          }}>
-            No hay quiniela activa
+        <div>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '24px' }}>
+            ❌ No hay quiniela activa
           </h3>
-          <p style={{
-            color: 'rgba(255, 255, 255, 0.7)',
-            fontSize: '16px',
-            margin: 0
-          }}>
-            Primero crea una quiniela para gestionar resultados
+          <p style={{ margin: 0, opacity: 0.8 }}>
+            Crea una nueva quiniela en la sección de administración
           </p>
         </div>
       </div>
     );
   }
 
-  const finishedMatches = matches.filter(m => m.status === 'FINISHED').length;
+  const finishedMatches = matches.filter(match => match.status === 'FINISHED').length;
   const progressPercentage = matches.length > 0 ? (finishedMatches / matches.length) * 100 : 0;
+  const pendingMatches = matches.filter(match => match.status !== 'FINISHED');
 
   return (
-    <div style={{ color: 'white' }}>
+    <div style={{
+      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(29, 78, 216, 0.1) 100%)',
+      backdropFilter: 'blur(10px)',
+      borderRadius: '20px',
+      padding: '32px',
+      border: '1px solid rgba(255, 255, 255, 0.2)'
+    }}>
       {/* Header */}
       <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: '24px'
+      }}>
+        <div>
+          <h2 style={{
+            fontSize: '28px',
+            fontWeight: 'bold',
+            background: 'linear-gradient(135deg, #ffffff 0%, #3b82f6 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            margin: '0 0 8px 0'
+          }}>
+            🏆 Gestión de Resultados
+          </h2>
+          <p style={{
+            color: 'rgba(255, 255, 255, 0.8)',
+            margin: 0,
+            fontSize: '16px'
+          }}>
+            Quiniela: {currentQuiniela.name}
+          </p>
+        </div>
+
+        {/* Controles de modo masivo */}
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {!bulkMode ? (
+            <>
+              <button
+                onClick={toggleBulkMode}
+                disabled={pendingMatches.length === 0}
+                style={{
+                  background: pendingMatches.length > 0 ? 
+                    'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 
+                    'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '12px 20px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: pendingMatches.length > 0 ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                🚀 Modo Masivo
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleBulkUpdate}
+                disabled={bulkResults.size === 0 || bulkUpdating}
+                style={{
+                  background: bulkResults.size > 0 && !bulkUpdating ? 
+                    'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 
+                    'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '12px 20px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: bulkResults.size > 0 && !bulkUpdating ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {bulkUpdating ? (
+                  <>
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      border: '2px solid rgba(255, 255, 255, 0.3)',
+                      borderTop: '2px solid white',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }}></div>
+                    Actualizando...
+                  </>
+                ) : (
+                  <>
+                    ⚡ Actualizar {bulkResults.size} Resultados
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={cancelBulkMode}
+                disabled={bulkUpdating}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '12px',
+                  padding: '12px 20px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: bulkUpdating ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                ❌ Cancelar
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Información de modo masivo */}
+      {bulkMode && (
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.1)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          borderRadius: '12px',
+          padding: '16px',
+          marginBottom: '24px'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '8px'
+          }}>
+            <span style={{ fontSize: '20px' }}>🚀</span>
+            <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '16px' }}>
+              Modo Actualización Masiva Activado
+            </span>
+          </div>
+          <p style={{
+            color: 'rgba(255, 255, 255, 0.8)',
+            margin: 0,
+            fontSize: '14px'
+          }}>
+            Ingresa los marcadores para múltiples partidos y actualízalos todos a la vez.
+            {bulkResults.size > 0 && (
+              <span style={{ color: '#10b981', marginLeft: '8px' }}>
+                ({bulkResults.size} partidos con marcadores ingresados)
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+
+      {/* Barra de progreso */}
+      <div style={{
         background: 'rgba(255, 255, 255, 0.1)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: '16px',
-        padding: '24px',
-        marginBottom: '24px',
-        border: '1px solid rgba(255, 255, 255, 0.2)'
+        borderRadius: '12px',
+        padding: '16px',
+        marginBottom: '24px'
       }}>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '16px'
+          marginBottom: '8px'
         }}>
-          <div>
-            <h3 style={{
-              fontSize: '24px',
-              fontWeight: 'bold',
-              color: 'white',
-              margin: '0 0 8px 0'
-            }}>
-              📊 Gestión de Resultados
-            </h3>
-            <p style={{
-              fontSize: '14px',
-              color: 'rgba(255, 255, 255, 0.8)',
-              margin: 0
-            }}>
-              {currentQuiniela.title} - {matches.length} partidos
-            </p>
-          </div>
-          
-          <button
-            onClick={loadCurrentQuiniela}
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              color: 'white',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-            }}
-          >
-            🔄 Actualizar
-          </button>
+          <span style={{
+            fontSize: '14px',
+            fontWeight: '600',
+            color: 'white'
+          }}>
+            Progreso de Resultados
+          </span>
+          <span style={{
+            fontSize: '14px',
+            color: 'rgba(255, 255, 255, 0.8)'
+          }}>
+            {finishedMatches} de {matches.length} completados
+          </span>
         </div>
-
-        {/* Progress */}
+        
         <div style={{
-          background: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: '12px',
-          padding: '16px'
+          width: '100%',
+          height: '8px',
+          background: 'rgba(255, 255, 255, 0.2)',
+          borderRadius: '4px',
+          overflow: 'hidden'
         }}>
           <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '8px'
-          }}>
-            <span style={{
-              fontSize: '14px',
-              fontWeight: '600',
-              color: 'white'
-            }}>
-              Progreso de Resultados
-            </span>
-            <span style={{
-              fontSize: '14px',
-              color: 'rgba(255, 255, 255, 0.8)'
-            }}>
-              {finishedMatches} de {matches.length} completados
-            </span>
-          </div>
-          
-          <div style={{
-            width: '100%',
-            height: '8px',
-            background: 'rgba(255, 255, 255, 0.2)',
+            width: `${progressPercentage}%`,
+            height: '100%',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             borderRadius: '4px',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              width: `${progressPercentage}%`,
-              height: '100%',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              borderRadius: '4px',
-              transition: 'width 0.3s ease'
-            }}></div>
-          </div>
-          
-          <div style={{
-            fontSize: '12px',
-            color: 'rgba(255, 255, 255, 0.7)',
-            marginTop: '4px'
-          }}>
-            {progressPercentage.toFixed(1)}% completado
-          </div>
+            transition: 'width 0.3s ease'
+          }}></div>
+        </div>
+        
+        <div style={{
+          fontSize: '12px',
+          color: 'rgba(255, 255, 255, 0.7)',
+          marginTop: '4px'
+        }}>
+          {progressPercentage.toFixed(1)}% completado
         </div>
       </div>
 
@@ -280,19 +532,23 @@ export default function ResultsManagement() {
             index={index}
             onUpdateResult={handleUpdateResult}
             updating={updating === match.id}
+            bulkMode={bulkMode}
+            bulkScore={bulkResults.get(match.id) || { homeScore: '', awayScore: '' }}
+            onBulkScoreChange={handleBulkScoreChange}
+            validationError={validationErrors.get(match.id)}
           />
         ))}
       </div>
 
-      {/* Estadísticas de la Quiniela */}
-      {quinielaStats && (
+      {/* Estadísticas y Rankings */}
+      {quinielaStats && quinielaStats.userRanking.length > 0 && (
         <div style={{
           background: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(10px)',
           borderRadius: '16px',
           padding: '24px',
-          marginBottom: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.2)'
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          marginBottom: '24px'
         }}>
           <h4 style={{
             fontSize: '20px',
@@ -300,145 +556,63 @@ export default function ResultsManagement() {
             color: 'white',
             margin: '0 0 16px 0'
           }}>
-            📈 Estadísticas Actuales
+            📊 Ranking Actual
           </h4>
           
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '16px',
-            marginBottom: '24px'
-          }}>
-            <div style={{
-              textAlign: 'center',
-              background: 'rgba(255, 255, 255, 0.1)',
-              padding: '20px',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.2)'
-            }}>
-              <div style={{
-                fontSize: '32px',
-                fontWeight: 'bold',
-                color: '#3b82f6',
-                margin: '0 0 8px 0'
-              }}>
-                {quinielaStats.totalUsers}
-              </div>
-              <div style={{
-                fontSize: '14px',
-                color: 'rgba(255, 255, 255, 0.8)'
-              }}>
-                Participantes
-              </div>
-            </div>
-            
-            <div style={{
-              textAlign: 'center',
-              background: 'rgba(255, 255, 255, 0.1)',
-              padding: '20px',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.2)'
-            }}>
-              <div style={{
-                fontSize: '32px',
-                fontWeight: 'bold',
-                color: '#10b981',
-                margin: '0 0 8px 0'
-              }}>
-                {quinielaStats.totalPredictions}
-              </div>
-              <div style={{
-                fontSize: '14px',
-                color: 'rgba(255, 255, 255, 0.8)'
-              }}>
-                Predicciones
-              </div>
-            </div>
-            
-            <div style={{
-              textAlign: 'center',
-              background: 'rgba(255, 255, 255, 0.1)',
-              padding: '20px',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.2)'
-            }}>
-              <div style={{
-                fontSize: '32px',
-                fontWeight: 'bold',
-                color: '#f59e0b',
-                margin: '0 0 8px 0'
-              }}>
-                {quinielaStats.userRanking[0]?.totalPoints || 0}
-              </div>
-              <div style={{
-                fontSize: '14px',
-                color: 'rgba(255, 255, 255, 0.8)'
-              }}>
-                Puntaje Líder
-              </div>
-            </div>
-          </div>
-
-          {/* Ranking Actual */}
           <div style={{ overflowX: 'auto' }}>
             <table style={{
               width: '100%',
-              borderCollapse: 'collapse',
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '12px',
-              overflow: 'hidden'
+              borderCollapse: 'collapse'
             }}>
               <thead>
                 <tr style={{
-                  background: 'rgba(255, 255, 255, 0.1)'
+                  borderBottom: '2px solid rgba(255, 255, 255, 0.2)'
                 }}>
                   <th style={{
-                    padding: '16px',
+                    padding: '12px 16px',
                     textAlign: 'left',
+                    color: 'rgba(255, 255, 255, 0.8)',
                     fontSize: '14px',
-                    fontWeight: 'bold',
-                    color: 'rgba(255, 255, 255, 0.9)'
-                  }}>Posición</th>
+                    fontWeight: '600'
+                  }}>
+                    Posición
+                  </th>
                   <th style={{
-                    padding: '16px',
+                    padding: '12px 16px',
                     textAlign: 'left',
+                    color: 'rgba(255, 255, 255, 0.8)',
                     fontSize: '14px',
-                    fontWeight: 'bold',
-                    color: 'rgba(255, 255, 255, 0.9)'
-                  }}>Usuario</th>
+                    fontWeight: '600'
+                  }}>
+                    Usuario
+                  </th>
                   <th style={{
-                    padding: '16px',
+                    padding: '12px 16px',
                     textAlign: 'left',
+                    color: 'rgba(255, 255, 255, 0.8)',
                     fontSize: '14px',
-                    fontWeight: 'bold',
-                    color: 'rgba(255, 255, 255, 0.9)'
-                  }}>Puntos</th>
+                    fontWeight: '600'
+                  }}>
+                    Puntos
+                  </th>
                   <th style={{
-                    padding: '16px',
+                    padding: '12px 16px',
                     textAlign: 'left',
+                    color: 'rgba(255, 255, 255, 0.8)',
                     fontSize: '14px',
-                    fontWeight: 'bold',
-                    color: 'rgba(255, 255, 255, 0.9)'
-                  }}>Precisión</th>
+                    fontWeight: '600'
+                  }}>
+                    Aciertos
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {quinielaStats.userRanking.map((user, index) => (
                   <tr key={user.userId} style={{
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                  >
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}>
                     <td style={{
-                      padding: '16px',
-                      fontSize: '14px',
-                      fontWeight: 'bold'
+                      padding: '16px'
                     }}>
                       <span style={{
                         display: 'inline-flex',
@@ -446,10 +620,10 @@ export default function ResultsManagement() {
                         justifyContent: 'center',
                         width: '32px',
                         height: '32px',
-                        borderRadius: '8px',
-                        color: 'white',
+                        borderRadius: '50%',
                         fontSize: '14px',
                         fontWeight: 'bold',
+                        color: 'white',
                         background: index === 0 ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' : 
                                    index === 1 ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)' : 
                                    index === 2 ? 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)' : 
@@ -592,260 +766,279 @@ export default function ResultsManagement() {
   );
 }
 
-// Componente para cada partido
-function MatchResultCard({ match, index, onUpdateResult, updating }) {
+// Componente para cada partido - Actualizado para soportar modo masivo
+function MatchResultCard({ 
+  match, 
+  index, 
+  onUpdateResult, 
+  updating,
+  bulkMode = false,
+  bulkScore = { homeScore: '', awayScore: '' },
+  onBulkScoreChange,
+  validationError
+}) {
   const [homeScore, setHomeScore] = useState(match.homeScore ?? '');
   const [awayScore, setAwayScore] = useState(match.awayScore ?? '');
 
   const isFinished = match.status === 'FINISHED';
+  const canEdit = !isFinished || bulkMode;
+
+  const handleSubmit = () => {
+    if (!bulkMode) {
+      onUpdateResult(match.id, homeScore, awayScore);
+    }
+  };
+
+  const handleBulkChange = (type, value) => {
+    if (onBulkScoreChange) {
+      onBulkScoreChange(match.id, type, value);
+    }
+  };
+
+  const displayHomeScore = bulkMode ? bulkScore.homeScore : homeScore;
+  const displayAwayScore = bulkMode ? bulkScore.awayScore : awayScore;
 
   return (
     <div style={{
-      background: 'rgba(255, 255, 255, 0.1)',
+      background: isFinished ? 
+        'rgba(16, 185, 129, 0.1)' : 
+        'rgba(255, 255, 255, 0.1)',
       backdropFilter: 'blur(10px)',
       borderRadius: '16px',
-      padding: '24px',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
+      padding: '20px',
+      border: validationError ? 
+        '2px solid rgba(239, 68, 68, 0.6)' : 
+        `1px solid ${isFinished ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`,
+      position: 'relative',
       transition: 'all 0.3s ease'
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-      e.currentTarget.style.transform = 'translateY(-2px)';
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-      e.currentTarget.style.transform = 'translateY(0)';
-    }}
-    >
+    }}>
+      {/* Indicador de estado */}
+      <div style={{
+        position: 'absolute',
+        top: '16px',
+        right: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }}>
+        {isFinished && (
+          <span style={{
+            background: 'rgba(16, 185, 129, 0.2)',
+            color: '#10b981',
+            fontSize: '12px',
+            fontWeight: '600',
+            padding: '4px 12px',
+            borderRadius: '20px',
+            border: '1px solid rgba(16, 185, 129, 0.4)'
+          }}>
+            ✅ Finalizado
+          </span>
+        )}
+        
+        {validationError && (
+          <span style={{
+            background: 'rgba(239, 68, 68, 0.2)',
+            color: '#ef4444',
+            fontSize: '12px',
+            fontWeight: '600',
+            padding: '4px 12px',
+            borderRadius: '20px',
+            border: '1px solid rgba(239, 68, 68, 0.4)'
+          }}>
+            ❌ {validationError}
+          </span>
+        )}
+
+        <span style={{
+          color: 'rgba(255, 255, 255, 0.6)',
+          fontSize: '12px'
+        }}>
+          #{index + 1}
+        </span>
+      </div>
+
+      {/* Información del partido */}
       <div style={{
         display: 'flex',
-        flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
-        gap: '20px'
+        marginBottom: '16px'
       }}>
-        {/* Info del Partido */}
-        <div style={{ flex: 1 }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: '12px'
-          }}>
-            <span style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              color: 'white',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              padding: '4px 8px',
-              borderRadius: '6px'
-            }}>
-              #{index + 1}
-            </span>
-            <span style={{
-              fontSize: '12px',
-              color: 'rgba(255, 255, 255, 0.7)',
-              background: 'rgba(255, 255, 255, 0.1)',
-              padding: '4px 8px',
-              borderRadius: '6px'
-            }}>
-              {match.league}
-            </span>
-            {isFinished && (
-              <span style={{
-                background: 'rgba(16, 185, 129, 0.2)',
-                color: '#10b981',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                border: '1px solid rgba(16, 185, 129, 0.4)'
-              }}>
-                ✅ Terminado
-              </span>
-            )}
-          </div>
-          
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: 'bold',
-            color: 'white',
-            margin: '0 0 8px 0'
-          }}>
-            {match.homeTeam} vs {match.awayTeam}
-          </h3>
-          
-          <p style={{
-            fontSize: '14px',
-            color: 'rgba(255, 255, 255, 0.7)',
-            margin: 0,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            📅 {formatMatchDate(match.date)}
-          </p>
-        </div>
-
-        {/* Formulario de Resultado */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '20px'
+          gap: '20px',
+          flex: 1
         }}>
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
+            textAlign: 'center',
+            flex: 1
           }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                fontSize: '12px',
-                fontWeight: '600',
-                color: 'rgba(255, 255, 255, 0.8)',
-                marginBottom: '8px'
-              }}>
-                {match.homeTeam.split(' ').slice(-1)[0]}
-              </div>
-              <input
-                type="number"
-                min="0"
-                max="20"
-                value={homeScore}
-                onChange={(e) => setHomeScore(e.target.value)}
-                disabled={isFinished}
-                style={{
-                  width: '64px',
-                  height: '48px',
-                  textAlign: 'center',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '12px',
-                  color: '#374151',
-                  outline: 'none',
-                  transition: 'all 0.3s ease'
-                }}
-                placeholder="0"
-                onFocus={(e) => {
-                  if (!isFinished) {
-                    e.target.style.borderColor = '#3b82f6';
-                    e.target.style.background = 'white';
-                  }
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.9)';
-                }}
-              />
-            </div>
-            
             <div style={{
-              fontSize: '24px',
-              fontWeight: 'bold',
-              color: 'rgba(255, 255, 255, 0.5)'
+              fontSize: '16px',
+              fontWeight: '600',
+              color: 'white',
+              marginBottom: '8px'
             }}>
-              -
+              {match.homeTeam}
             </div>
-            
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                fontSize: '12px',
-                fontWeight: '600',
-                color: 'rgba(255, 255, 255, 0.8)',
-                marginBottom: '8px'
-              }}>
-                {match.awayTeam.split(' ').slice(-1)[0]}
-              </div>
-              <input
-                type="number"
-                min="0"
-                max="20"
-                value={awayScore}
-                onChange={(e) => setAwayScore(e.target.value)}
-                disabled={isFinished}
-                style={{
-                  width: '64px',
-                  height: '48px',
-                  textAlign: 'center',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '12px',
-                  color: '#374151',
-                  outline: 'none',
-                  transition: 'all 0.3s ease'
-                }}
-                placeholder="0"
-                onFocus={(e) => {
-                  if (!isFinished) {
-                    e.target.style.borderColor = '#3b82f6';
-                    e.target.style.background = 'white';
-                  }
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.9)';
-                }}
-              />
-            </div>
+            <input
+              type="number"
+              min="0"
+              max="99"
+              value={displayHomeScore}
+              onChange={(e) => bulkMode ? 
+                handleBulkChange('homeScore', e.target.value) : 
+                setHomeScore(e.target.value)
+              }
+              disabled={!canEdit || updating}
+              style={{
+                width: '60px',
+                height: '48px',
+                fontSize: '20px',
+                fontWeight: 'bold',
+                textAlign: 'center',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '12px',
+                color: 'white',
+                outline: 'none',
+                transition: 'all 0.2s ease'
+              }}
+              onFocus={(e) => {
+                if (canEdit) {
+                  e.target.style.border = '2px solid #3b82f6';
+                  e.target.style.background = 'rgba(59, 130, 246, 0.1)';
+                }
+              }}
+              onBlur={(e) => {
+                e.target.style.border = '2px solid rgba(255, 255, 255, 0.2)';
+                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+              }}
+            />
           </div>
 
-          {/* Botón de Actualizar */}
-          {!isFinished && (
-            <button
-              onClick={() => onUpdateResult(match.id, homeScore, awayScore)}
-              disabled={updating || homeScore === '' || awayScore === ''}
+          <div style={{
+            fontSize: '24px',
+            fontWeight: 'bold',
+            color: 'rgba(255, 255, 255, 0.6)',
+            margin: '0 16px'
+          }}>
+            VS
+          </div>
+
+          <div style={{
+            textAlign: 'center',
+            flex: 1
+          }}>
+            <div style={{
+              fontSize: '16px',
+              fontWeight: '600',
+              color: 'white',
+              marginBottom: '8px'
+            }}>
+              {match.awayTeam}
+            </div>
+            <input
+              type="number"
+              min="0"
+              max="99"
+              value={displayAwayScore}
+              onChange={(e) => bulkMode ? 
+                handleBulkChange('awayScore', e.target.value) : 
+                setAwayScore(e.target.value)
+              }
+              disabled={!canEdit || updating}
               style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                width: '60px',
+                height: '48px',
+                fontSize: '20px',
+                fontWeight: 'bold',
+                textAlign: 'center',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '12px',
                 color: 'white',
-                border: 'none',
-                padding: '12px 20px',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                opacity: (updating || homeScore === '' || awayScore === '') ? 0.5 : 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
+                outline: 'none',
+                transition: 'all 0.2s ease'
               }}
-              onMouseEnter={(e) => {
-                if (!updating && homeScore !== '' && awayScore !== '') {
-                  e.target.style.transform = 'translateY(-1px)';
-                  e.target.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.3)';
+              onFocus={(e) => {
+                if (canEdit) {
+                  e.target.style.border = '2px solid #3b82f6';
+                  e.target.style.background = 'rgba(59, 130, 246, 0.1)';
                 }
               }}
-              onMouseLeave={(e) => {
-                if (!updating) {
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = 'none';
-                }
+              onBlur={(e) => {
+                e.target.style.border = '2px solid rgba(255, 255, 255, 0.2)';
+                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
               }}
-            >
-              {updating ? (
-                <>
-                  <div style={{
-                    width: '16px',
-                    height: '16px',
-                    border: '2px solid rgba(255, 255, 255, 0.3)',
-                    borderTop: '2px solid white',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }}></div>
-                  Actualizando...
-                </>
-              ) : (
-                <>
-                  ✅ Confirmar
-                </>
-              )}
-            </button>
-          )}
+            />
+          </div>
         </div>
+
+        {/* Botón de actualización individual (solo en modo normal) */}
+        {!bulkMode && !isFinished && (
+          <button
+            onClick={handleSubmit}
+            disabled={updating || homeScore === '' || awayScore === ''}
+            style={{
+              background: updating ? 'rgba(255, 255, 255, 0.2)' : 
+                        (homeScore !== '' && awayScore !== '') ? 
+                        'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 
+                        'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              padding: '12px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: updating || homeScore === '' || awayScore === '' ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              minWidth: '140px',
+              justifyContent: 'center',
+              marginLeft: '20px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {updating ? (
+              <>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  borderTop: '2px solid white',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }}></div>
+                Actualizando...
+              </>
+            ) : (
+              <>
+                💾 Actualizar
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Información adicional */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        fontSize: '12px',
+        color: 'rgba(255, 255, 255, 0.6)'
+      }}>
+        <span>
+          {match.league}
+        </span>
+        {match.date && (
+          <span>
+            {formatMatchDate ? formatMatchDate(match.date) : 'Fecha no disponible'}
+          </span>
+        )}
       </div>
     </div>
   );

@@ -7,11 +7,13 @@ const API_SPORTS_URL = 'https://v3.football.api-sports.io';
 // Obtener partidos desde Football-Data.org
 export const getMatchesFromFootballData = async () => {
   try {
-    const apiKey = import.meta.env.VITE_FOOTBALL_API_KEY;
-    if (!apiKey) {
-      console.log('No API key for Football-Data.org');
-      return [];
-    }
+  const apiKey = import.meta.env.VITE_FOOTBALL_API_KEY;
+  console.log('API KEY FOOTBALL-DATA:', apiKey); // 👈 debug
+  
+  if (!apiKey) {
+    console.log('No API key for Football-Data.org');
+    return [];
+  }
 
     // Obtener partidos de las principales ligas
     const leagues = [
@@ -63,7 +65,6 @@ export const getMatchesFromFootballData = async () => {
   }
 };
 
-// Obtener partidos desde API-Sports (respaldo)
 export const getMatchesFromApiSports = async () => {
   try {
     const apiKey = import.meta.env.VITE_API_SPORTS_KEY;
@@ -73,29 +74,33 @@ export const getMatchesFromApiSports = async () => {
     }
 
     const today = new Date().toISOString().split('T')[0];
+
     const response = await fetch(
-      `${API_SPORTS_URL}/fixtures?date=${today}&league=39,140,135,78,61`, // Premier, La Liga, Serie A, Bundesliga, Ligue 1
+      `https://api-football-v1.p.rapidapi.com/v2/fixtures/date/${today}`, // Premier League como ejemplo
       {
         headers: {
           'X-RapidAPI-Key': apiKey,
-          'X-RapidAPI-Host': 'v3.football.api-sports.io'
+          'X-RapidAPI-Host': 'api-football-v1.p.rapidapi.com'
         }
       }
     );
 
     if (response.ok) {
       const data = await response.json();
-      return data.response.map(match => ({
-        id: `as_${match.fixture.id}`,
-        homeTeam: match.teams.home.name,
-        awayTeam: match.teams.away.name,
+      console.log('🔍 Respuesta de API-Sports:', data);
+
+
+      return data.api.fixtures.map(match => ({
+        id: `as_${match.fixture_id}`,
+        homeTeam: match.homeTeam.team_name,
+        awayTeam: match.awayTeam.team_name,
         league: match.league.name,
-        date: new Date(match.fixture.date),
+        date: new Date(match.event_date),
         source: 'api-sports',
-        apiId: match.fixture.id.toString(),
-        status: match.fixture.status.short,
-        homeScore: match.goals.home,
-        awayScore: match.goals.away
+        apiId: match.fixture_id.toString(),
+        status: match.status,
+        homeScore: match.goalsHomeTeam,
+        awayScore: match.goalsAwayTeam
       }));
     }
 
@@ -105,6 +110,7 @@ export const getMatchesFromApiSports = async () => {
     return [];
   }
 };
+
 
 // Partidos de muestra para desarrollo/demo
 export const getSampleMatches = () => {

@@ -8,6 +8,9 @@ import ResultsManagement from './ResultsManagement';
 import PaymentsManagement from './PaymentsManagement';
 import AdminQuinielaControl from './AdminQuinielaControl';
 import QuinielaExportComponent from './QuinielaExportComponent';
+import WeeklyQuinielaCreator from './WeeklyQuinielaCreator';
+
+
 import Importador from './Importador';
 
 
@@ -266,6 +269,13 @@ export default function AdminPanel() {
   isActive={activeTab === 'import'}
   onClick={setActiveTab}
 />
+          <TabButton
+               tabId="auto-quiniela"
+            label="Auto Quiniela"
+            icon="🤖"
+            isActive={activeTab === 'auto-quiniela'}
+            onClick={setActiveTab}
+          />
         </div>
       </div>
 
@@ -702,6 +712,7 @@ export default function AdminPanel() {
           <AdminPredictionsViewer />
         </div>
       )}
+      {activeTab === 'auto-quiniela' && <WeeklyQuinielaCreator />}
 
       {activeTab === 'payments' && (
         <div style={{
